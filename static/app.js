@@ -8,7 +8,7 @@
   const n = x => Number(x || 0).toLocaleString('en-US');
   const money = x => '$' + Math.round(x).toLocaleString('en-US');
   const title = s => (s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-  const UPPER = new Set(['LLC', 'INC', 'CORP', 'LTD', 'LP', 'LLP', 'CO', 'USA', 'DBA', 'II', 'III', 'IV']);
+  const UPPER = new Set(['LLC', 'LP', 'LLP', 'USA', 'DBA', 'II', 'III', 'IV']);
   const cname = s => (s || '').split(/\s+/).map(w => UPPER.has(w) || (w.length <= 2 && /^[A-Z]+$/.test(w)) ? w : title(w)).join(' ');
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   let menu, items = [], sel = -1, timer, staticIndex;

@@ -22,7 +22,7 @@ STATES = {"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "C
           "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming", "PR": "Puerto Rico"}
 
 
-UPPER = {"LLC", "INC", "CORP", "LTD", "LP", "LLP", "CO", "USA", "DBA", "II", "III", "IV"}
+UPPER = {"LLC", "LP", "LLP", "USA", "DBA", "II", "III", "IV"}
 
 
 def cname(s):
