@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} | {{ site }}{% endblock %}
+{% block description %}{{ description }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{{ base }}">Check a carrier</a> › {{ title }}</p>
+<h1>{{ title }}</h1>
+<div class="prose">{{ html|safe }}</div>
+{% endblock %}

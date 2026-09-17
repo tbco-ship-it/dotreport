@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Trucking companies by state — FMCSA safety report cards for {{ '{:,}'.format(n_carriers) }} carriers with 50+ trucks | {{ site }}{% endblock %}
+{% block description %}Browse safety report cards for {{ '{:,}'.format(n_carriers) }} active interstate motor carriers with 50 or more power units, by home state.{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{{ base }}">Check a carrier</a> › By state</p>
+<h1>Trucking companies by state</h1>
+<p class="muted">{{ '{:,}'.format(n_carriers) }} active interstate carriers with 50+ power units, graded from FMCSA's public data. Smaller carriers aren't listed here but every USDOT number works in the <a href="{{ base }}">search</a>.</p>
+<div class="states">{% for s in states %}<a href="{{ base }}carriers/{{ s.code|lower }}/">{{ s.name }}<span>{{ '{:,}'.format(s.n) }}</span></a>{% endfor %}</div>
+{% endblock %}

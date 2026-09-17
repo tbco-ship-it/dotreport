@@ -1,0 +1,23 @@
+---
+title: Methodology & data sources
+description: Exactly how the A–F grade is computed from FMCSA's public data, the national averages we compare against, and what the grade is not.
+---
+<h2>Data</h2>
+<p>Everything comes from four FMCSA open-data files published on <a href="https://data.transportation.gov/" rel="noopener">data.transportation.gov</a>: the Motor Carrier Census (<code>az4n-8mr2</code>), SMS BASIC measures for property carriers (<code>4y6x-dmck</code>), Licensing &amp; Insurance filings (<code>c5y8-a4uz</code>) and the SMS crash file (<code>4wxs-vbns</code>). Static pages are rebuilt from a fresh download; the search box queries the same files live. No scraped or third-party data.</p>
+<h2>National averages</h2>
+<p>The driver and vehicle out-of-service rates we compare against are computed from the entire SMS file (all inspections ÷ all OOS inspections over the 24-month window), not copied from a blog. Current values: driver <strong>{{ nat.driver_oos_rate }}%</strong>, vehicle <strong>{{ nat.vehicle_oos_rate }}%</strong>, from the {{ nat.sms_updated }} snapshot covering {{ '{:,}'.format(nat.carriers_in_sms) }} carriers.</p>
+<h2>The grade</h2>
+<p>Every carrier starts at 100 points.</p>
+<ul>
+<li><strong>Driver OOS rate</strong> (needs ≥ 5 driver inspections): −10 if above the national average, −25 if at least double it.</li>
+<li><strong>Vehicle OOS rate</strong> (needs ≥ 5 vehicle inspections): −10 if above the national average, −25 if 1.5× or worse.</li>
+<li><strong>BASIC alerts</strong>: −15 per BASIC flagged in the public file (Unsafe Driving, HOS, Driver Fitness, Controlled Substances, Vehicle Maintenance).</li>
+<li><strong>Crashes, 24 months</strong>: −20 if fatal crashes reach 0.5 per 100 power units (roughly double the national large-truck rate); otherwise −15 if more than 8 crashes per 100 power units, −5 if more than 4. Crash records don't assign fault.</li>
+<li><strong>Registration and authority</strong>: −40 if the USDOT number itself is inactive; otherwise −20 if the carrier has an MC docket that isn't active.</li>
+<li><strong>Liability insurance</strong>: shown when a BMC-91/91X filing appears in the open-data extract, but never deducted — that extract covers only a fraction of carriers, so a missing row is not evidence of a lapse. The official record is FMCSA's <a href="https://li-public.fmcsa.dot.gov/" rel="noopener">L&amp;I system</a>.</li>
+</ul>
+<p>A = 90+, B = 75–89, C = 60–74, D = 40–59, F = below 40. Carriers with fewer than 5 inspections in total are marked "limited data".</p>
+<h2>What it is not</h2>
+<p>It is not an FMCSA safety rating, not a CSA percentile, and not a prediction of a crash. FMCSA's own ratings (Satisfactory / Conditional / Unsatisfactory) come from compliance reviews and are shown on <a href="https://safer.fmcsa.dot.gov/" rel="noopener">SAFER</a>. Our grade is a transparent summary of the public record so that a carrier can see what others see, and a shipper can get a first read in five seconds. Use SAFER and SMS for the official record.</p>
+<h2>Corrections</h2>
+<p>If a page shows the wrong company for a USDOT number or a figure that doesn't match FMCSA's file for the same snapshot date, <a href="../contact/">tell us</a> with the USDOT number and we'll check the source row. Data errors in FMCSA's own record go through <a href="../guides/dataqs-challenge/">DataQs</a>.</p>

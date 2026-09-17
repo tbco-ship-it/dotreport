@@ -1,0 +1,4 @@
+dist/
+data/raw/
+__pycache__/
+.scratch_api.log

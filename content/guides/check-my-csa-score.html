@@ -1,0 +1,27 @@
+---
+title: How to check your CSA score (and what's actually public)
+description: Where CSA percentiles live, why you can't see them without a PIN, what brokers and insurers can see, and how to read the public numbers on this site.
+date: 2026-09-17
+---
+<h2>First, the part nobody says plainly</h2>
+<p><strong>Drivers don't have CSA scores.</strong> CSA (Compliance, Safety, Accountability) scores belong to the <em>motor carrier</em> — the USDOT number. A driver's individual roadside history lives in the <a href="https://psp.fmcsa.dot.gov/" rel="noopener">Pre-Employment Screening Program (PSP)</a> report, which you can order for yourself for $10. If you're an owner-operator with your own authority, you are the carrier, so both apply to you.</p>
+<h2>What's public vs. what needs a PIN</h2>
+<p>Since the FAST Act of 2015, FMCSA <a href="https://csa.fmcsa.dot.gov/" rel="noopener">hides percentile scores and alert symbols for property carriers</a> from the public SMS site. What anyone can still see:</p>
+<ul>
+<li>Every roadside inspection in the last 24 months and its violations</li>
+<li>Driver and vehicle out-of-service (OOS) counts and rates</li>
+<li>Crash records (with severity, not fault)</li>
+<li>Whether each BASIC has enough data to be measured</li>
+<li>Operating authority status and insurance filings (BMC-91/91X, BMC-34, BMC-84/85)</li>
+</ul>
+<p>That public slice is exactly what this site grades. It's also what a broker's compliance tool or an insurance underwriter looks at first, which is why the OOS rate against the national average matters more day-to-day than the hidden percentile.</p>
+<h2>How to see your own percentiles</h2>
+<ol>
+<li>Go to the <a href="https://ai.fmcsa.dot.gov/SMS/" rel="noopener">SMS website</a> and search your USDOT number.</li>
+<li>Click <strong>Log in</strong>. You need your FMCSA Portal account (login.gov) or a USDOT PIN.</li>
+<li>No PIN? Request one at the <a href="https://portal.fmcsa.dot.gov/" rel="noopener">FMCSA Portal</a>. Instant if you can verify by login.gov; otherwise it's mailed to the address on your MCS-150, which takes about a week.</li>
+<li>Once in, each BASIC shows a percentile (0–100, lower is better) and whether it's over the intervention threshold — 65% for Unsafe Driving, HOS and Crash Indicator, 80% for the rest, 5 points lower for hazmat carriers.</li>
+</ol>
+<h2>Reading the public numbers</h2>
+<p>Two rules of thumb from FMCSA's own methodology: percentiles are only computed when a BASIC has enough inspections with violations (typically 3–5 depending on the BASIC), and violations are time-weighted: the last 6 months count ×3, months 7–12 count ×2, months 13–24 count ×1. So a bad quarter loses most of its weight after a year and leaves the record entirely after two — if you stop adding to it.</p>
+<p>If a violation on your record is wrong, it can be removed through <a href="../dataqs-challenge/">DataQs</a>, and the recomputed numbers show up in the next monthly SMS snapshot.</p>

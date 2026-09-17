@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}DOT Report Card — free USDOT / MC number check with a plain-English safety grade{% endblock %}
+{% block head %}<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"{{ site }}","applicationCategory":"BusinessApplication","inLanguage":"en","url":"{{ origin }}{{ base }}","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+<script>if(!location.hash&&!location.search)document.documentElement.classList.add('landing')</script>{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>What's on your DOT report card?</h1>
+  <p>Type a USDOT number, MC number or company name. You get the same public FMCSA record a broker or insurer pulls — out-of-service rates against the national average, BASIC alerts, crashes, authority and insurance — graded A to F so you know where you stand.</p>
+</section>
+
+<div class="card" id="lookup">
+  <p class="card-title">USDOT number, MC number or company name</p>
+  <label class="field"><span class="visually-hidden" hidden>Carrier</span>
+    <input id="q" class="pick" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="e.g. 54283, MC-136818 or Swift Transportation" aria-label="USDOT number, MC number or company name">
+  </label>
+  <div class="actions"><button id="go" class="next primary" type="button">Show my report card</button><button class="next" type="button" data-demo="54283">Try an example</button></div>
+  <p id="msg" class="err" hidden></p>
+  <p class="hint">Free, no sign-up. Nothing you type is stored — the lookup goes straight to FMCSA's open-data API.</p>
+</div>
+<div id="result" class="result" aria-live="polite"></div>
+
+<div class="sec"><div class="sec-h"><h2>How the grade works</h2><a href="{{ base }}methodology/">Full methodology</a></div>
+<div class="prose">
+<p>Every carrier starts at 100. Points come off for a driver or vehicle out-of-service rate above the national average ({{ nat.driver_oos_rate }}% / {{ nat.vehicle_oos_rate }}%, computed from the current SMS file), for each BASIC alert flag, for crashes relative to fleet size, for inactive operating authority and for a missing liability filing. Fewer than 5 inspections and we say so instead of pretending.</p>
+<p>What you can't get here — or anywhere public — is your CSA percentile. FMCSA hides those for property carriers. <a href="{{ base }}guides/check-my-csa-score/">Here's how to log in and see them.</a></p>
+</div></div>
+
+<div class="sec"><div class="sec-h"><h2>Largest carriers by state</h2><a href="{{ base }}carriers/">All states</a></div>
+<div class="states">{% for s in states[:12] %}<a href="{{ base }}carriers/{{ s.code|lower }}/">{{ s.name }}<span>{{ '{:,}'.format(s.n) }}</span></a>{% endfor %}</div>
+</div>
+
+<div class="sec"><div class="sec-h"><h2>Guides for owner-operators</h2><a href="{{ base }}guides/">All guides</a></div>
+<ul class="list">{% for g in guides %}<li><a href="{{ base }}guides/{{ g.slug }}/">{{ g.title }}</a></li>{% endfor %}</ul>
+</div>
+{% endblock %}
+{% block scripts %}<script>window.NAT={{ nat|tojson }};window.PARTNERS={{ partners|tojson }};window.API="{{ api }}";window.BASE="{{ base }}"</script>
+<script src="{{ base }}static/grade.js?v={{ v }}" defer></script><script src="{{ base }}static/app.js?v={{ v }}" defer></script>{% endblock %}

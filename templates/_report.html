@@ -1,0 +1,70 @@
+{# Static report card — static/app.js renders the same structure for live lookups. Keep the two in step. #}
+{% macro money(n) %}${{ '{:,.0f}'.format(n) }}{% endmacro %}
+{% macro report(c, nat, partners, base, static_page=True) %}
+{% set g = c.grade %}
+<div class="report">
+<section class="sheet g-{{ g.letter }}">
+  <div class="sheet-top">
+    <div class="letter" aria-label="Grade {{ g.letter }}">{{ g.letter }}</div>
+    <div>
+      <h2 class="sheet-name" style="margin:0">{{ c.name|cname }}{% if c.dba %} <span class="muted">(DBA {{ c.dba|cname }})</span>{% endif %}</h2>
+      <p class="sheet-sub">USDOT {{ c.dot }}{% if c.mc %} · {{ c.mc }}{% endif %} · {{ c.city }}, {{ c.state }} · <span class="score">{{ g.score }}/100</span></p>
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip {{ 'ok' if c.status == 'A' or not c.status else 'bad' }}">{{ 'Active' if c.status == 'A' or not c.status else 'Inactive' }} USDOT</span>
+    {% if c.mc %}<span class="chip {{ 'ok' if c.mc_status == 'A' else 'bad' }}">{{ c.mc }} {{ 'active' if c.mc_status == 'A' else 'not active' }}</span>{% endif %}
+    <span class="chip">{{ '{:,}'.format(c.pu) }} power unit{{ '' if c.pu == 1 else 's' }}</span>
+    <span class="chip">{{ '{:,}'.format(c.drivers) }} driver{{ '' if c.drivers == 1 else 's' }}</span>
+    {% if c.hm %}<span class="chip">Hazmat</span>{% endif %}
+  </div>
+  <ul class="factors">
+  {% for f in g.factors %}<li><b>{{ f.label }}</b><span class="pts {{ 'neg' if f.points < 0 else 'zero' }}">{{ f.points if f.points < 0 else '—' }}</span><small>{{ f.note }}</small></li>{% endfor %}
+  </ul>
+  {% if g.limited %}<p class="limited">Fewer than 5 roadside inspections in the last 24 months, so this grade rests mostly on authority, insurance and crash records. A clean but thin record is not the same as a proven one.</p>{% endif %}
+</section>
+
+<div class="tiles">
+  <div class="tile"><b>{{ '{:,}'.format(c.insp) }}</b><span>Inspections, 24 months</span></div>
+  <div class="tile {{ 'bad' if c.driver_oos_rate is not none and c.driver_oos_rate > nat.driver_oos_rate else 'ok' if c.driver_oos_rate is not none else '' }}"><b>{{ c.driver_oos_rate ~ '%' if c.driver_oos_rate is not none else '—' }}</b><span>Driver OOS · national {{ nat.driver_oos_rate }}%</span></div>
+  <div class="tile {{ 'bad' if c.vehicle_oos_rate is not none and c.vehicle_oos_rate > nat.vehicle_oos_rate else 'ok' if c.vehicle_oos_rate is not none else '' }}"><b>{{ c.vehicle_oos_rate ~ '%' if c.vehicle_oos_rate is not none else '—' }}</b><span>Vehicle OOS · national {{ nat.vehicle_oos_rate }}%</span></div>
+  <div class="tile {{ 'bad' if c.crashes.fatal else '' }}"><b>{{ c.crashes.total }}</b><span>Crashes{% if c.crashes.fatal %} · {{ c.crashes.fatal }} fatal{% endif %}{% if c.crashes.injury %} · {{ c.crashes.injury }} injury{% endif %}</span></div>
+  <div class="tile"><b>{{ c.basics|selectattr('alert')|list|length }}</b><span>BASIC alerts</span></div>
+  <div class="tile"><b>{{ c.since[:4] if c.since else '—' }}</b><span>USDOT since</span></div>
+</div>
+
+<table class="tbl"><caption>Safety BASICs (public SMS file)</caption>
+{% for b in c.basics %}<tr><th>{{ b.label }}</th><td>{{ b.viol }} inspection{{ '' if b.viol == 1 else 's' }} with violations · <span class="{{ 'alert-y' if b.alert else 'alert-n' }}">{{ 'ALERT' if b.alert else 'no alert' }}</span></td></tr>{% endfor %}
+</table>
+<p class="hint">FMCSA hides percentile scores for property carriers from the public. The counts above and the alert flag are what anyone — including brokers and insurers — can see. <a href="{{ base }}guides/check-my-csa-score/">How to see your full CSA percentiles</a>.</p>
+
+<table class="tbl"><caption>Company profile</caption>
+<tr><th>Legal name</th><td>{{ c.name }}</td></tr>
+{% if c.dba %}<tr><th>DBA</th><td>{{ c.dba }}</td></tr>{% endif %}
+<tr><th>Physical address</th><td>{{ c.street|title }}, {{ c.city }}, {{ c.state }} {{ c.zip }}</td></tr>
+<tr><th>Operation</th><td>{{ c.classdef|title if c.classdef else '—' }}</td></tr>
+<tr><th>Power units / drivers</th><td>{{ '{:,}'.format(c.pu) }} / {{ '{:,}'.format(c.drivers) }}</td></tr>
+<tr><th>MCS-150 mileage</th><td>{{ '{:,}'.format(c.mileage) if c.mileage else '—' }}{% if c.mileage and c.mileage_year and c.mileage_year != '0' %} ({{ c.mileage_year }}){% endif %}</td></tr>
+<tr><th>MCS-150 last updated</th><td>{{ c.mcs150_date or '—' }}</td></tr>
+{% if c.cargo %}<tr><th>Cargo carried</th><td>{{ c.cargo|join(', ') }}</td></tr>{% endif %}
+</table>
+
+<table class="tbl"><caption>Insurance on file with FMCSA</caption>
+{% for i in c.insurance %}<tr><th>{{ i.type }} ({{ i.form }})</th><td>{{ money(i.amount) }} · {{ i.company }}{% if i.effective %} · since {{ i.effective }}{% endif %}</td></tr>{% else %}<tr><th>Filings</th><td>Not in FMCSA's open-data extract — <a href="https://li-public.fmcsa.dot.gov/LIVIEW/pkg_carrquery.prc_carrlist?n_dotno={{ c.dot }}" rel="noopener">check L&amp;I</a></td></tr>{% endfor %}
+</table>
+
+{% set live = partners.values()|selectattr('url')|list %}
+<div class="sec"><div class="sec-h"><h2>What to do next</h2></div>
+<div class="steps">
+{% for p in partners.values() if p.url and (not p.when or g.letter in p.when) %}
+  <a class="step" href="{{ p.url }}" rel="sponsored noopener" target="_blank" data-slot="{{ p.key }}"><b>{{ p.headline }}</b><span>{{ p.blurb }}</span><em>{{ p.cta }} →</em></a>
+{% endfor %}
+  {% if g.letter in 'CDF' %}<a class="step" href="{{ base }}guides/dataqs-challenge/"><b>Think a violation is wrong? Challenge it through DataQs</b><span>Successful DataQs requests remove the violation from your record and re-run the numbers on this page.</span><em>Read the guide →</em></a>{% endif %}
+  <a class="step" href="{{ base }}guides/roadside-inspection-checklist/"><b>Stay off the out-of-service list</b><span>The violations that most often park a truck at the scale, and the 10-minute pre-trip that catches them.</span><em>Checklist →</em></a>
+  <a class="step" href="{{ base }}guides/insurance-requirements/"><b>Know what insurance FMCSA actually requires</b><span>$750k vs $1M vs $5M liability, cargo, and what a lapsed BMC-91X filing does to your authority.</span><em>Requirements →</em></a>
+</div>
+{% if live %}<p class="disclosure">Links marked with a partner name may pay us a referral fee if you sign up. It never changes the grade or the order of anything on this page.</p>{% endif %}
+</div>
+<p class="hint">Source: FMCSA Motor Carrier Census, SMS BASICs, L&amp;I insurance and crash files via data.transportation.gov, SMS snapshot {{ nat.sms_updated }}. Official record: <a href="https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string={{ c.dot }}" rel="noopener">SAFER company snapshot</a>{% if static_page %} · <a href="https://ai.fmcsa.dot.gov/SMS/Carrier/{{ c.dot }}/Overview.aspx" rel="noopener">SMS overview</a>{% endif %}.</p>
+</div>
+{% endmacro %}

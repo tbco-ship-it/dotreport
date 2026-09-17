@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ g.title }} | {{ site }}{% endblock %}
+{% block description %}{{ g.description }}{% endblock %}
+{% block head %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":g.title,"description":g.description,"datePublished":g.date,"dateModified":today,"inLanguage":"en","author":{"@type":"Organization","name":site},"mainEntityOfPage":origin ~ base ~ path}|tojson }}</script>{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{{ base }}">Check a carrier</a> › <a href="{{ base }}guides/">Guides</a> › {{ g.title }}</p>
+<h1>{{ g.title }}</h1>
+<p class="muted">{{ g.description }}</p>
+<div class="prose">{{ g.html|safe }}</div>
+<div class="ad-slot"><!-- ad: guide --></div>
+<div class="card" style="margin-top:32px"><p class="card-title">See where your own numbers stand</p><p style="margin:0 0 12px">The report card shows your out-of-service rates against the national average and every BASIC alert a broker can see.</p><p class="actions" style="margin:0"><a class="next primary" href="{{ base }}">Check my USDOT</a></p></div>
+<p class="hint">Updated {{ g.date }}. Sources are linked inline; this is general information, not legal advice.</p>
+{% endblock %}

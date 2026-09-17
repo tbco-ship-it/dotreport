@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Guides for owner-operators: CSA scores, roadside inspections, DataQs, insurance | {{ site }}{% endblock %}
+{% block description %}Short, sourced guides on the things that move a carrier's FMCSA record: checking CSA percentiles, avoiding out-of-service orders, challenging violations through DataQs, and insurance filings.{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{{ base }}">Check a carrier</a> › Guides</p>
+<h1>Guides</h1>
+<ul class="list">{% for g in guides %}<li><a href="{{ base }}guides/{{ g.slug }}/">{{ g.title }}<span class="meta">{{ g.date }}</span></a></li>{% endfor %}</ul>
+{% endblock %}

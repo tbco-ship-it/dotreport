@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ site }}{% endblock %}</title>
+<meta name="description" content="{% block description %}Type a USDOT or MC number and get a plain-English report card built from FMCSA's public safety data: out-of-service rates vs the national average, BASIC alerts, crashes, authority and insurance on file.{% endblock %}">
+<link rel="canonical" href="{{ origin }}{{ base }}{{ path }}">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></noscript>
+<link rel="stylesheet" href="{{ base }}static/style.css?v={{ v }}">
+<link rel="icon" href="{{ base }}static/favicon.svg?v={{ v }}" type="image/svg+xml">
+{% if adsense_pub %}<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{{ adsense_pub }}" crossorigin="anonymous"></script>{% endif %}
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="{{ base }}">DOT<em>ReportCard</em></a>
+  <nav>
+    <a href="{{ base }}">Check a carrier</a>
+    <a href="{{ base }}carriers/">By state</a>
+    <a href="{{ base }}guides/">Guides</a>
+    <a href="{{ base }}methodology/">How grades work</a>
+  </nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>
+  <p><a href="{{ base }}about/">About</a> · <a href="{{ base }}methodology/">Methodology &amp; data sources</a> · <a href="{{ base }}privacy/">Privacy</a> · <a href="{{ base }}contact/">Contact</a></p>
+  <p>Built from FMCSA's public Motor Carrier Census, SMS, insurance and crash files on data.transportation.gov (SMS snapshot {{ nat.sms_updated }}). The letter grade is our reading of that public data, not an FMCSA safety rating. Always confirm with <a href="https://safer.fmcsa.dot.gov/" rel="noopener">SAFER</a> before a business decision.</p>
+</footer>
+<script src="{{ base }}static/ui.js?v={{ v }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

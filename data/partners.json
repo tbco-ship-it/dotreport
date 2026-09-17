@@ -1,0 +1,6 @@
+{
+  "insurance": {"key": "insurance", "name": "", "url": "", "when": "", "headline": "Compare commercial truck insurance quotes", "blurb": "Underwriters price from the same public record on this page. Get quotes from carriers that specialise in owner-operators and small fleets.", "cta": "Get quotes"},
+  "factoring": {"key": "factoring", "name": "", "url": "", "when": "AB", "headline": "Get paid the same day you deliver", "blurb": "Non-recourse factoring for carriers with a clean record: invoices funded within hours instead of 30–60 days.", "cta": "See factoring rates"},
+  "fuel": {"key": "fuel", "name": "", "url": "", "when": "", "headline": "Cut fuel costs at truck stops nationwide", "blurb": "A fuel card or discount app takes cents off every gallon with no fleet minimum.", "cta": "Start saving on fuel"},
+  "loadboard": {"key": "loadboard", "name": "", "url": "", "when": "", "headline": "Find loads with brokers that pay on time", "blurb": "A load board with broker credit scores so you can skip slow payers.", "cta": "Browse loads"}
+}

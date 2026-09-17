@@ -1,0 +1,40 @@
+name: Build and deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+env:
+  # Until the custom domain is bound: project-pages base. Switch to "/" + origin https://dotreportcard.com + cname when DNS is live.
+  BASE: /dotreport/
+  ORIGIN: https://tbco-ship-it.github.io
+  CNAME: ""
+  API: https://dotreport-api.tbfcompany1.workers.dev
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jinja2
+      - run: python scripts/build.py --base "$BASE" --origin "$ORIGIN" --cname "$CNAME" --api "$API"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
