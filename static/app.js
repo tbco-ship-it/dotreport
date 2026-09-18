@@ -37,7 +37,8 @@
   const UPPER = new Set(['LLC', 'LP', 'LLP', 'USA', 'DBA', 'II', 'III', 'IV']);
   const cname = s => (s || '').split(/\s+/).map(w => UPPER.has(w) || (w.length <= 2 && /^[A-Z]+$/.test(w)) ? w : title(w)).join(' ');
 
-  let menu, items = [], sel = -1, timer, staticIndex;
+  let menu, items = [], sel = -1, timer, staticIndex, loadId = 0;
+  const request = (url) => fetch(url, { signal: AbortSignal.timeout(15000) });
 
   function leaveLanding() {
     const html = document.documentElement;
@@ -123,7 +124,7 @@
     const v = q.value.trim();
     if (v.length < 2 || /^\d+$/.test(v)) { closeMenu(); return; }
     try {
-      const r = await fetch(`${API}/search?q=${encodeURIComponent(v)}`);
+      const r = await request(`${API}/search?q=${encodeURIComponent(v)}`);
       if (q.value.trim() !== v) return;
       openMenu(r.ok ? await r.json() : []);
     } catch (e) {
@@ -170,7 +171,7 @@
     say('');
     if (go) go.disabled = true;
     try {
-      const r = await fetch(`${API}/search?q=${encodeURIComponent(v)}`);
+      const r = await request(`${API}/search?q=${encodeURIComponent(v)}`);
       const rows = r.ok ? await r.json() : [];
       if (rows.length === 1) return load(rows[0].dot);
       if (!rows.length) {
@@ -188,6 +189,7 @@
   }
 
   async function load(dot) {
+    const currentLoad = ++loadId;
     say('');
     if (go) go.disabled = true;
     closeMenu();
@@ -198,7 +200,7 @@
       </div>`;
 
     try {
-      const r = await fetch(`${API}/carrier?dot=${encodeURIComponent(dot)}`);
+      const r = await request(`${API}/carrier?dot=${encodeURIComponent(dot)}`);
       if (r.status === 404) {
         out.innerHTML = '';
         say(`USDOT ${dot} was not located in FMCSA census records. Verify the number on the vehicle cab card or MCS-150.`);
@@ -206,6 +208,7 @@
       }
       if (!r.ok) throw new Error('API error: ' + r.status);
       const c = await r.json();
+      if (currentLoad !== loadId) return;
       c.grade = window.dotGrade(c, NAT);
 
       if (!staticIndex) {
@@ -214,6 +217,7 @@
       const idx = await staticIndex;
       const permalink = idx[c.dot] ? `${BASE}carrier/${c.dot}-${idx[c.dot]}/` : null;
 
+      if (currentLoad !== loadId) return;
       out.innerHTML = render(c, permalink);
       leaveLanding();
       history.replaceState(null, '', `?dot=${c.dot}`);
@@ -221,62 +225,36 @@
       if (window.__reveal) window.__reveal(out, true, 0);
       out.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     } catch (e) {
+      if (currentLoad !== loadId) return;
       out.innerHTML = '';
-      say('FMCSA public data service timed out. Please try again shortly or inspect SAFER directly.');
+      say('FMCSA public data service is unavailable. Please try again shortly or inspect SAFER directly.');
     } finally {
-      if (go) go.disabled = false;
+      if (go && currentLoad === loadId) go.disabled = false;
     }
   }
 
   // Mirrors templates/_report.html
   function render(c, permalink) {
-    const g = c.grade;
-    const alerts = (c.basics || []).filter(b => b.alert);
+    const v = window.dotAssess(c, NAT);
+    const g = v.grade;
+    const alerts = v.basics.filter(b => b.ac === true);
     const nAlerts = alerts.length;
-    const isActive = c.status === 'A' || !c.status;
-    const dRate = c.driver_oos_rate;
-    const vRate = c.vehicle_oos_rate;
+    const isActive = c.status === 'A';
+    const dRate = v.driver.rate;
+    const vRate = v.vehicle.rate;
     const dBad = dRate != null && dRate > NAT.driver_oos_rate;
     const vBad = vRate != null && vRate > NAT.vehicle_oos_rate;
 
-    // Decision Heading and Text
-    let decisionHeading = 'Review required before dispatch';
-    let decisionText = '';
-    if (g.letter === 'A') {
-      decisionHeading = 'Eligible for dispatch — Clean safety record';
-      decisionText = 'Operating authority active, insurance on file, zero BASIC alerts, and inspection out-of-service rates remain below national averages.';
-    } else if (g.letter === 'B') {
-      decisionHeading = 'Eligible for further review';
-      decisionText = vBad && nAlerts > 0
-        ? `Vehicle out-of-service rate exceeds national average and ${nAlerts} BASIC alert flag is present. Confirm maintenance records before dispatch.`
-        : vBad ? 'Vehicle out-of-service rate is above national average. Review recent roadside maintenance inspection reports.'
-        : dBad ? 'Driver out-of-service rate is above national average. Review hours-of-service compliance.'
-        : nAlerts > 0 ? `FMCSA public data shows ${nAlerts} safety BASIC alert flag. Inquire regarding corrective action.`
-        : 'Meets standard safety baseline. Confirm specific internal cargo and insurance limit requirements prior to dispatch.';
-    } else if (g.letter === 'C') {
-      decisionHeading = 'Review required before dispatch';
-      decisionText = 'Multiple risk factors or elevated out-of-service rates recorded. Detailed screening recommended.';
-    } else if (g.letter === 'D') {
-      decisionHeading = 'Elevated risk — Detailed review required';
-      decisionText = 'Substantial out-of-service rates or acute BASIC safety alert flags detected in public roadside data.';
-    } else {
-      decisionHeading = 'Critical issues detected — Review required';
-      decisionText = !isActive
-        ? 'Operating authority is currently inactive or revoked. Do not dispatch until reinstated with FMCSA.'
-        : 'Severe safety performance deficiencies, inactive credentials, or critical crash frequency recorded.';
-    }
-
-    if (g.limited) {
-      decisionText = 'Fewer than 5 roadside inspections recorded in the last 24 months. Grade rests primarily on authority, insurance filings, and crash history.';
-    }
+    const decisionHeading = v.heading, decisionText = v.message;
 
     // Gauge calculations
-    const dVal = Math.max(0, Math.min(100, Math.round(((dRate || 0) / 15) * 10000) / 100));
-    const dAvg = Math.round((NAT.driver_oos_rate / 15) * 10000) / 100;
+    const dMax = Math.max(15, dRate || 0), vMax = Math.max(40, vRate || 0);
+    const dVal = Math.max(0, Math.min(100, Math.round(((dRate || 0) / dMax) * 10000) / 100));
+    const dAvg = Math.round((NAT.driver_oos_rate / dMax) * 10000) / 100;
     const dDiff = dRate != null ? (Math.round((dRate - NAT.driver_oos_rate) * 100) / 100).toFixed(2) : null;
 
-    const vVal = Math.max(0, Math.min(100, Math.round(((vRate || 0) / 40) * 10000) / 100));
-    const vAvg = Math.round((NAT.vehicle_oos_rate / 40) * 10000) / 100;
+    const vVal = Math.max(0, Math.min(100, Math.round(((vRate || 0) / vMax) * 10000) / 100));
+    const vAvg = Math.round((NAT.vehicle_oos_rate / vMax) * 10000) / 100;
     const vDiff = vRate != null ? (Math.round((vRate - NAT.vehicle_oos_rate) * 100) / 100).toFixed(2) : null;
 
     // Factors HTML
@@ -285,13 +263,13 @@
     ).join('');
 
     // BASIC rows HTML
-    const basicRowsHtml = (c.basics || []).map(b =>
+    const basicRowsHtml = v.basics.map(b =>
       `<div class="alertrow">
         <div>
           <div class="rowtitle">${esc(b.label)}</div>
           <div class="rowsub">${n(b.viol)} inspection${b.viol === 1 ? '' : 's'} with recorded violations in last 24 months</div>
         </div>
-        ${b.alert ? '<span class="chip chip--warn">Alert flag</span>' : '<span class="chip chip--good">No alert</span>'}
+        <span class="chip ${b.ac === true ? 'chip--warn' : 'chip--neutral'}">${esc(b.indicatorLabel)}</span>
       </div>`
     ).join('');
 
@@ -305,7 +283,7 @@
           </tr>`).join('')}
       </table>` : `
       <div class="cardbody">
-        <p class="muted">No active liability insurance policy was located in the current open-data extract. Confirm active BMC-91 / BMC-91X filings directly on the official FMCSA Licensing & Insurance (L&I) database prior to contracting.</p>
+        <p class="muted">A BMC-91/91X liability filing was not located in this extract. This does not establish whether the carrier is insured. Confirm active BMC-91 / BMC-91X filings directly on the official FMCSA Licensing & Insurance (L&I) database prior to contracting.</p>
       </div>`;
 
     // Partners HTML
@@ -331,12 +309,12 @@
             <span>${n(c.pu)} power unit${c.pu === 1 ? '' : 's'}</span>
             <span>${n(c.drivers)} driver${c.drivers === 1 ? '' : 's'}</span>
             ${c.classdef ? `<span>${esc(title(c.classdef))}</span>` : ''}
-            ${c.hm ? '<span>Hazmat authorized</span>' : ''}
+            ${c.hm ? '<span>Hazmat indicated in census (permit not verified)</span>' : ''}
           </div>
         </div>
         <div class="snapshot">
-          <span class="rec-dot">●</span> <b>Verified FMCSA Record</b>
-          <span>SMS snapshot · ${esc(NAT.sms_updated)}</span>
+          <span class="rec-dot">●</span> <b>FMCSA public-data summary</b>
+          <span>SMS dataset last updated · ${esc(NAT.sms_updated)}</span>
         </div>
       </section>
 
@@ -344,8 +322,8 @@
         <div class="gradecell">
           <div class="grade grade--${g.letter}" aria-label="Grade ${g.letter}">${g.letter}</div>
           <div class="scorelabel">
-            Safety score
-            <b>${g.score} / 100</b>
+            Independent score
+            <b>${g.score == null ? 'Not rated' : g.score + ' / 100'}</b>
           </div>
         </div>
         <div class="decision">
@@ -356,7 +334,7 @@
         <div class="deductions">
           <div class="deductions__title">
             <span>Score deductions</span>
-            <span>${ptsOff > 0 ? '−' + ptsOff + ' pts' : '0 pts'}</span>
+            <span>${g.limited ? 'Not rated' : ptsOff > 0 ? '−' + ptsOff + ' pts' : '0 pts'}</span>
           </div>
           <ul>${factorsHtml}</ul>
         </div>
@@ -382,10 +360,10 @@
                   <span class="metricvalue">${dRate != null ? dRate + '%' : '—'}</span>
                   ${dDiff != null ? `<span class="delta ${dDiff > 0 ? 'delta--bad' : 'delta--good'}">${dDiff > 0 ? '+' : ''}${dDiff} pp vs U.S. avg (${NAT.driver_oos_rate}%)</span>` : ''}
                 </div>
-                ${dRate != null ? `<span class="chip ${dBad ? 'chip--bad' : 'chip--good'}">${dBad ? 'Above average' : 'Below average'}</span>` : '<span class="chip chip--neutral">No inspection data</span>'}
+                ${dRate != null ? `<span class="chip chip--${v.driver.tone}">${v.driver.label}</span>` : '<span class="chip chip--neutral">No inspection data</span>'}
               </div>
               <div class="gauge" style="--value:${dVal}%;--avg:${dAvg}%;--tone:${dBad ? 'var(--red)' : 'var(--green)'}">
-                <div class="scalelabels"><span>0%</span><span>15%</span></div>
+                <div class="scalelabels"><span>0%</span><span>${dMax}%</span></div>
                 <div class="track">
                   <div class="fill"></div>
                   <div class="marker"><span>U.S. avg ${NAT.driver_oos_rate}%</span></div>
@@ -406,10 +384,10 @@
                   <span class="metricvalue">${vRate != null ? vRate + '%' : '—'}</span>
                   ${vDiff != null ? `<span class="delta ${vDiff > 0 ? 'delta--bad' : 'delta--good'}">${vDiff > 0 ? '+' : ''}${vDiff} pp vs U.S. avg (${NAT.vehicle_oos_rate}%)</span>` : ''}
                 </div>
-                ${vRate != null ? `<span class="chip ${vBad ? 'chip--bad' : 'chip--good'}">${vBad ? 'Above average' : 'Below average'}</span>` : '<span class="chip chip--neutral">No inspection data</span>'}
+                ${vRate != null ? `<span class="chip chip--${v.vehicle.tone}">${v.vehicle.label}</span>` : '<span class="chip chip--neutral">No inspection data</span>'}
               </div>
               <div class="gauge" style="--value:${vVal}%;--avg:${vAvg}%;--tone:${vBad ? 'var(--red)' : 'var(--green)'}">
-                <div class="scalelabels"><span>0%</span><span>40%</span></div>
+                <div class="scalelabels"><span>0%</span><span>${vMax}%</span></div>
                 <div class="track">
                   <div class="fill"></div>
                   <div class="marker"><span>U.S. avg ${NAT.vehicle_oos_rate}%</span></div>
@@ -428,13 +406,13 @@
             <header class="cardhead">
               <div>
                 <p class="eyebrow">FMCSA Safety Measurement System</p>
-                <h2>Safety BASICs status</h2>
+                <h2>Public acute/critical indicators</h2>
               </div>
-              <span class="chip ${nAlerts > 0 ? 'chip--warn' : 'chip--good'}">${nAlerts} alert${nAlerts === 1 ? '' : 's'}</span>
+              <span class="chip ${nAlerts > 0 ? 'chip--warn' : 'chip--neutral'}">${nAlerts} indicated</span>
             </header>
             ${basicRowsHtml}
             <div class="cardfoot-note">
-              <p class="hint">FMCSA hides percentile ranks for property carriers from the general public under the FAST Act. The violation counts and alert flags above are the public indicators visible to brokers, shippers, and underwriters. <a href="${BASE}guides/check-my-csa-score/">Learn how to access carrier CSA percentiles</a>.</p>
+              <p class="hint">These are public acute/critical investigation indicators, not a complete SMS alert assessment. Missing values are unknown. Some property-carrier percentiles and alerts are not public. <a href="${BASE}guides/check-my-csa-score/">Learn how to access carrier CSA percentiles</a>.</p>
             </div>
           </section>
 
@@ -442,19 +420,19 @@
           <section class="card" id="crashes-section">
             <header class="cardhead">
               <div>
-                <p class="eyebrow">Last 24 months</p>
-                <h2>Reportable crash history</h2>
+                <p class="eyebrow">Source extract</p>
+                <h2>Crash records in source extract</h2>
               </div>
               <span class="smalllink">${c.crashes ? c.crashes.total : 0} total crash${c.crashes && c.crashes.total === 1 ? '' : 'es'}</span>
             </header>
             <div class="crashgrid">
-              <div class="crashstat ${c.crashes && c.crashes.fatal > 0 ? 'crashstat--bad' : ''}">
-                <strong>${c.crashes ? c.crashes.fatal : 0}</strong>
-                <span>Fatal crashes</span>
+              <div class="crashstat ${c.crashes && (v.crashes.fatal_crashes || 0) > 0 ? 'crashstat--bad' : ''}">
+                <strong>${v.crashes.fatal_crashes == null ? 'Unknown' : n(v.crashes.fatal_crashes)}</strong>
+                <span>Fatal crash records</span>
               </div>
-              <div class="crashstat ${c.crashes && c.crashes.injury > 0 ? 'crashstat--warn' : ''}">
-                <strong>${c.crashes ? c.crashes.injury : 0}</strong>
-                <span>Injury crashes</span>
+              <div class="crashstat ${c.crashes && (v.crashes.injury_crashes || 0) > 0 ? 'crashstat--warn' : ''}">
+                <strong>${v.crashes.injury_crashes == null ? 'Unknown' : n(v.crashes.injury_crashes)}</strong>
+                <span>Injury crash records</span>
               </div>
               <div class="crashstat">
                 <strong>${c.crashes ? c.crashes.tow : 0}</strong>
@@ -463,6 +441,7 @@
             </div>
           </section>
 
+          <p class="hint">People reported: ${v.crashes.fatalities == null ? 'Unknown' : n(v.crashes.fatalities)} fatalities; ${v.crashes.injuries == null ? 'Unknown' : n(v.crashes.injuries)} injured. Crash records do not assign fault. ${esc(v.legacyNote)}</p>
           <!-- Company Operations Profile -->
           <section class="card" id="profile-section">
             <header class="cardhead">
@@ -476,7 +455,7 @@
               <tr><th>Legal company name</th><td>${esc(c.name)}</td></tr>
               ${c.dba ? `<tr><th>Doing Business As (DBA)</th><td>${esc(c.dba)}</td></tr>` : ''}
               <tr><th>Physical address</th><td>${esc(title(c.street))}, ${esc(c.city)}, ${esc(c.state)} ${esc(c.zip)}</td></tr>
-              <tr><th>Operation classification</th><td>${esc(title(c.classdef) || 'Interstate Carrier')}</td></tr>
+              <tr><th>Operation classification</th><td>${esc(title(c.classdef) || 'Unknown')}</td></tr>
               <tr><th>Power units / Drivers</th><td>${n(c.pu)} power units / ${n(c.drivers)} drivers</td></tr>
               <tr><th>MCS-150 reported mileage</th><td>${c.mileage ? n(c.mileage) : '—'}${c.mileage && c.mileage_year && c.mileage_year !== '0' ? ' (year ' + esc(c.mileage_year) + ')' : ''}</td></tr>
               <tr><th>MCS-150 last updated</th><td>${esc(c.mcs150_date || '—')}</td></tr>
@@ -489,7 +468,7 @@
             <header class="cardhead">
               <div>
                 <p class="eyebrow">FMCSA L&I filing records</p>
-                <h2>Liability insurance on file</h2>
+                <h2>Insurance filings in source extract</h2>
               </div>
               <a class="smalllink" href="https://li-public.fmcsa.dot.gov/LIVIEW/pkg_carrquery.prc_carrlist?n_dotno=${c.dot}" rel="noopener" target="_blank">Verify on FMCSA L&I</a>
             </header>
@@ -498,8 +477,9 @@
 
           <!-- Sources & Confidence Note -->
           <section class="card sourcebox" id="sources">
-            <strong>Data Confidence & Official Record Sources</strong>
-            <p>This report card combines records from FMCSA's public Motor Carrier Census, SMS roadside inspection files, and Licensing & Insurance (L&I) extracts (SMS snapshot ${esc(NAT.sms_updated)}). The letter grade is calculated using transparent mathematical deductions based on out-of-service deviations from the national average, BASIC violation density, fleet-proportional crash history, and authority status.</p>
+            <strong>Data dates &amp; official sources</strong>
+            <p>Policy ${g.version}. ${esc(v.legacyNote)} This is a live API response; record dates may differ from the comparison benchmark. API retrieval does not establish that upstream records are current.</p>
+            <p>This report card combines records from FMCSA's public Motor Carrier Census, SMS roadside inspection files, and Licensing & Insurance (L&I) extracts (SMS dataset last updated ${esc(NAT.sms_updated)}). The letter grade is calculated using transparent mathematical deductions based on out-of-service deviations from the national average, observed acute/critical indicators, fleet-proportional crash history, and authority status.</p>
             <p>A safety report card is a preliminary screening tool and does not constitute a government safety rating, insurance warranty, or binding dispatch approval. For official government records, visit the <a href="https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string=${c.dot}" rel="noopener" target="_blank">SAFER Carrier Snapshot</a>${permalink ? ` or the <a href="${permalink}">Dedicated permalink page</a>` : ''}.</p>
           </section>
         </div>
@@ -513,53 +493,17 @@
                 <p class="eyebrow">Critical checks</p>
                 <h2>Verification summary</h2>
               </div>
-              <span class="smalllink">4/4 evaluated</span>
+              <span class="smalllink">Public extract only</span>
             </header>
-            <div class="verifyrow">
-              <div class="verifylabel">
-                <span class="dot ${isActive ? 'good' : 'bad'}"></span>
-                Operating authority
-              </div>
-              <div class="verifyvalue">
-                ${isActive ? 'Active' : 'Inactive'}
-                <small>${isActive ? 'Authorized for hire' : 'Revoked or suspended'}</small>
-              </div>
-            </div>
-            <div class="verifyrow">
-              <div class="verifylabel">
-                <span class="dot ${c.insurance && c.insurance.length ? 'good' : 'warn'}"></span>
-                Liability insurance
-              </div>
-              <div class="verifyvalue">
-                ${c.insurance && c.insurance.length ? 'On file' : 'Check L&I'}
-                <small>${c.insurance && c.insurance.length ? 'Filing located' : 'Unconfirmed in extract'}</small>
-              </div>
-            </div>
-            <div class="verifyrow">
-              <div class="verifylabel">
-                <span class="dot ${nAlerts === 0 ? 'good' : 'warn'}"></span>
-                BASIC alert flags
-              </div>
-              <div class="verifyvalue">
-                ${nAlerts} alert${nAlerts === 1 ? '' : 's'}
-                <small>${nAlerts === 0 ? 'Zero alerts' : esc(alerts[0].label)}</small>
-              </div>
-            </div>
-            <div class="verifyrow">
-              <div class="verifylabel">
-                <span class="dot ${vBad ? 'bad' : 'good'}"></span>
-                Vehicle OOS rate
-              </div>
-              <div class="verifyvalue">
-                ${vBad ? 'Above average' : 'Below average'}
-                <small>${vRate != null ? vRate + '%' : 'No data'}</small>
-              </div>
-            </div>
-
+            ${v.checks.map(check => `<div class="verifyrow">
+              <div class="verifylabel"><span class="dot ${check.tone}"></span>${esc(check.label)}</div>
+              <div class="verifyvalue">${esc(check.value)}<small>${esc(check.note)}</small></div>
+            </div>`).join('')}
             <div class="review">
-              <b>${!isActive ? 'Critical issue: Inactive authority' : (['D', 'F'].includes(g.letter) || vBad || nAlerts > 0) ? 'Review required before dispatch' : 'Eligible for review'}</b>
-              <p>${!isActive ? 'This carrier does not hold active operating authority according to FMCSA records. Do not dispatch until active status is confirmed.' : (vBad || nAlerts > 0) ? 'Confirm recent roadside repair records, active certificate of insurance, and specific broker compliance guidelines.' : 'Carrier record shows active credentials and acceptable performance metrics across all critical checkpoints.'}</p>
-              <button class="button" type="button" onclick="window.print()">Download inspection report</button>
+              <b>Verify before contracting or dispatch</b>
+              <p>Confirm current operating authority in FMCSA L&amp;I and insurance coverage with the insurer. A public filing is not proof of active coverage or shipment suitability.</p>
+              <a class="smalllink" href="https://li-public.fmcsa.dot.gov/LIVIEW/pkg_carrquery.prc_carrlist?n_dotno=${c.dot}" target="_blank" rel="noopener">Open official L&amp;I record</a>
+              <button class="button" type="button" onclick="window.print()">Print / save report</button>
               <button class="button button--secondary" type="button" onclick="window.copyReportLink(this)">Copy report link</button>
             </div>
           </section>
@@ -574,7 +518,7 @@
               ${['C', 'D', 'F'].includes(g.letter) ? `
               <a class="partner-link" href="${BASE}guides/dataqs-challenge/">
                 <b>DataQs violation challenge guide</b>
-                <span>Remove erroneous roadside citations from your permanent record.</span>
+                <span>Learn how to request review of potentially incorrect records; removal is not guaranteed.</span>
                 <em>Read guide →</em>
               </a>` : ''}
             </div>

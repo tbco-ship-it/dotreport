@@ -1,0 +1,41 @@
+{
+  "browser": "Chromium",
+  "mode": "offline built HTML with inline repo CSS/JS and local API fixtures",
+  "limits": [
+    "Network blocked by browser policy",
+    "External fonts/ads excluded",
+    "history.replaceState stubbed because about:blank has no site origin",
+    "Real API, URL navigation and clipboard not verified"
+  ],
+  "checks": [
+    {
+      "step": "Static report + print handler",
+      "pass": true
+    },
+    {
+      "step": "390px responsive and verification-first order",
+      "pass": true
+    },
+    {
+      "step": "USDOT submit -> legacy API fixture -> truthful report",
+      "pass": true
+    },
+    {
+      "step": "Schema v2 fixture: one event with multiple victims",
+      "pass": true
+    },
+    {
+      "step": "Missing inspection result -> NR and neutral Unknown",
+      "pass": true
+    },
+    {
+      "step": "API failure fixture -> visible error, no fabricated report",
+      "pass": true
+    },
+    {
+      "step": "No unhandled application JavaScript errors",
+      "pass": true
+    }
+  ],
+  "page_errors": []
+}

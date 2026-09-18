@@ -6,9 +6,9 @@
 {% block content %}
 <div class="stage" id="stage">
   <section class="hero">
-    <div class="hero-badge">Official FMCSA Public Records · 2026 Snapshot</div>
+    <div class="hero-badge">Independent summary of FMCSA public records</div>
     <h1>U.S. Carrier Safety Inspection &amp; Report Card</h1>
-    <p>Search any USDOT number, MC number, or motor carrier name. Instantly inspect out-of-service rates vs. national benchmarks, BASIC safety alerts, 24-month crash records, operating authority, and active liability filings.</p>
+    <p>Search any USDOT number, MC number, or motor carrier name. Instantly inspect out-of-service rates vs. national benchmarks, public acute/critical indicators, crash records, registration, and insurance filings. Verify current authority and coverage separately.</p>
   </section>
 
   <div class="card search-card" id="lookup">
@@ -21,11 +21,11 @@
       <div class="demo-pills">
         <span class="demo-label">Examples:</span>
         <button class="demo-chip" type="button" data-demo="54283">Swift (54283)</button>
-        <button class="demo-chip" type="button" data-demo="53467">Knight (53467)</button>
-        <button class="demo-chip" type="button" data-demo="123456">Werner (123456)</button>
+        <button class="demo-chip" type="button" data-demo="53467">Werner (53467)</button>
+
       </div>
     </div>
-    <p id="msg" class="err" hidden></p>
+    <p id="msg" class="err" role="status" aria-live="polite" hidden></p>
     <p class="hint">Free public utility for shippers, brokers, and owner-operators. Direct query to FMCSA open safety datasets without registration.</p>
   </div>
 
@@ -39,12 +39,12 @@
       <a class="smalllink" href="{{ base }}methodology/">Full grading methodology →</a>
     </div>
     <div class="prose">
-      <p>Every registered carrier starts with a baseline score of 100. Deductions are systematically calculated using objective deviations from current national safety standards:</p>
+      <p>Our independent screening heuristic starts at 100 only when required data is sufficient. Otherwise the report is marked NR (not rated), not A. It is not an FMCSA rating or dispatch approval:</p>
       <ul>
         <li><strong>Out-of-Service Deviations:</strong> Penalties applied when driver OOS exceeds {{ nat.driver_oos_rate }}% or vehicle OOS exceeds {{ nat.vehicle_oos_rate }}% (computed from the active FMCSA SMS release).</li>
-        <li><strong>BASIC Safety Alerts:</strong> −15 points per acute alert flag across Unsafe Driving, Hours of Service, Vehicle Maintenance, and Controlled Substances.</li>
-        <li><strong>Fleet-Proportional Crashes:</strong> Penalties scaled to carrier power unit count for fatal and injury collision history over the past 24 months.</li>
-        <li><strong>Legal Credentials:</strong> −40 points for inactive or revoked operating authority; −20 points for missing mandatory BMC-91X liability filings.</li>
+        <li><strong>Public Acute/Critical Indicators:</strong> −15 per indicated category. Missing values are not a clean record; these indicators are not the full SMS alert system.</li>
+        <li><strong>Fleet-Proportional Crashes:</strong> Uses fatal crash event counts and total crash records per 100 power units, not the number of people killed or injured. Unknown event counts are not substituted.</li>
+        <li><strong>Legal Credentials:</strong> −40 for an explicitly inactive USDOT registration; otherwise −20 for an explicitly inactive docket. Unknown is not inactive. Missing insurance filings never deduct points.</li>
       </ul>
       <p>FMCSA restricts public CSA percentile displays for property motor carriers under the FAST Act. <a href="{{ base }}guides/check-my-csa-score/">Learn how authorized carriers view complete internal CSA percentiles</a>.</p>
     </div>

@@ -1,0 +1,121 @@
+{
+  "dot": 1294757,
+  "name": "SOLSBURY HILL LLC",
+  "dba": "DBC IRRIGATION SUPPLY",
+  "slug": "solsbury-hill-llc",
+  "street": "5805 E 39TH AVE",
+  "city": "Denver",
+  "state": "CO",
+  "zip": "80207",
+  "pu": 61,
+  "drivers": 57,
+  "hm": false,
+  "status": "A",
+  "operation": "A",
+  "classdef": "PRIVATE PROPERTY",
+  "mc": null,
+  "mc_status": null,
+  "mcs150_date": "2025-07-29",
+  "mileage": 670000,
+  "mileage_year": "2024",
+  "since": "2004-10-13",
+  "cargo": [
+    "Other"
+  ],
+  "insp": 20,
+  "driver_insp": 20,
+  "driver_oos": 2,
+  "vehicle_insp": 14,
+  "vehicle_oos": 2,
+  "basics": [
+    {
+      "key": "unsafe_driv",
+      "label": "Unsafe Driving",
+      "viol": 2,
+      "measure": 0.57,
+      "alert": false
+    },
+    {
+      "key": "hos_driv",
+      "label": "Hours-of-Service Compliance",
+      "viol": 0,
+      "measure": 0.0,
+      "alert": false
+    },
+    {
+      "key": "driv_fit",
+      "label": "Driver Fitness",
+      "viol": 2,
+      "measure": 1.23,
+      "alert": false
+    },
+    {
+      "key": "contr_subst",
+      "label": "Controlled Substances / Alcohol",
+      "viol": 0,
+      "measure": 0.0,
+      "alert": false
+    },
+    {
+      "key": "veh_maint",
+      "label": "Vehicle Maintenance",
+      "viol": 6,
+      "measure": 2.78,
+      "alert": false
+    }
+  ],
+  "driver_oos_rate": 10.0,
+  "vehicle_oos_rate": 14.3,
+  "insurance": [],
+  "crashes": {
+    "total": 0,
+    "fatal": 0,
+    "injury": 0,
+    "tow": 0,
+    "first": null,
+    "last": null
+  },
+  "grade": {
+    "score": 90,
+    "letter": "A",
+    "limited": false,
+    "factors": [
+      {
+        "key": "driver_oos",
+        "label": "Driver out-of-service rate",
+        "points": -10,
+        "note": "10.0% vs 5.42% national \u2014 above average"
+      },
+      {
+        "key": "vehicle_oos",
+        "label": "Vehicle out-of-service rate",
+        "points": 0,
+        "note": "14.3% vs 21.47% national \u2014 at or below average"
+      },
+      {
+        "key": "basics",
+        "label": "BASIC alerts",
+        "points": 0,
+        "note": "no BASIC alert flags in the public SMS file"
+      },
+      {
+        "key": "crashes",
+        "label": "Crashes (24 months)",
+        "points": 0,
+        "note": "0 reported"
+      },
+      {
+        "key": "authority",
+        "label": "Operating authority",
+        "points": 0,
+        "note": "no MC docket on file (private / exempt carrier)"
+      },
+      {
+        "key": "insurance",
+        "label": "Liability insurance filing",
+        "points": 0,
+        "note": "not in the open-data extract \u2014 verify on FMCSA L&I"
+      }
+    ]
+  }
+}

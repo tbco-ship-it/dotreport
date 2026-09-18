@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data/raw"
 S = "https://data.transportation.gov/resource"
-MIN_PU = int(sys.argv[1]) if len(sys.argv) > 1 else 50
+MIN_PU = int(sys.argv[1]) if __name__ == "__main__" and len(sys.argv) > 1 else 50
 CENSUS_COLS = ("dot_number,legal_name,dba_name,phy_street,phy_city,phy_state,phy_zip,phone,power_units,total_drivers,status_code,"
                "carrier_operation,classdef,docket1prefix,docket1,docket1_status_code,mcs150_date,mcs150_mileage,mcs150_mileage_year,hm_ind,add_date,"
                "crgo_genfreight,crgo_household,crgo_metalsheet,crgo_motoveh,crgo_drivetow,crgo_logpole,crgo_bldgmat,crgo_mobilehome,crgo_machlrg,"
@@ -60,24 +60,39 @@ def by_dots(ds, dots, col, select=None, chunk=400):
 
 def main():
     RAW.mkdir(parents=True, exist_ok=True)
+    manifest_path = RAW / "sources.json"
+    sources = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    def record_source(key, dataset):
+        try:
+            meta = json.load(urllib.request.urlopen(f"https://data.transportation.gov/api/views/{dataset}.json", timeout=60))
+            updated = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(meta["rowsUpdatedAt"]))
+        except Exception:
+            updated = None
+        sources[key] = {"dataset": dataset, "retrieved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "dataset_updated_at": updated, "reporting_period_end": None}
+        manifest_path.write_text(json.dumps(sources, indent=2))
     if not (RAW / "census.json").exists():  # each stage is resumable: delete the raw file to refetch it
         (RAW / "census.json").write_text(json.dumps(page("az4n-8mr2", f"status_code='A' AND carrier_operation='A' AND power_units::number>={MIN_PU}", select=CENSUS_COLS)))
+        record_source("census", "az4n-8mr2")
     census = json.loads((RAW / "census.json").read_text())
     dots = sorted({r["dot_number"] for r in census}, key=int)
     print("census", len(dots), file=sys.stderr)
 
     if not (RAW / "sms.json").exists():
         (RAW / "sms.json").write_text(json.dumps(by_dots("4y6x-dmck", dots, "dot_number")))
+        record_source("sms", "4y6x-dmck")
     if not (RAW / "insurance.json").exists():
         (RAW / "insurance.json").write_text(json.dumps(by_dots("c5y8-a4uz", dots, "usdot_number",
                                                               select="usdot_number,docket_number,ins_form_code,ins_type_code,max_cov_amount,effective_date,insurance_company_name,trans_date")))
+        record_source("insurance", "c5y8-a4uz")
     if not (RAW / "crashes.json").exists():
         (RAW / "crashes.json").write_text(json.dumps(by_dots("4wxs-vbns", dots, "dot_number",
                                                             select="dot_number,report_date,report_state,fatalities,injuries,tow_away,hazmat_released")))
+        record_source("crashes", "4wxs-vbns")
     nat = get("4y6x-dmck", {"$select": "sum(driver_oos_insp_total::number) as doos,sum(driver_insp_total::number) as dins,"
                                        "sum(vehicle_oos_insp_total::number) as voos,sum(vehicle_insp_total::number) as vins,count(*) as n"})[0]
     meta = json.load(urllib.request.urlopen("https://data.transportation.gov/api/views/4y6x-dmck.json", timeout=60))
     nat["sms_updated"] = time.strftime("%Y-%m-%d", time.gmtime(meta["rowsUpdatedAt"]))
+    nat["sources"] = sources
     nat["driver_oos_rate"] = round(100 * int(nat["doos"]) / int(nat["dins"]), 2)
     nat["vehicle_oos_rate"] = round(100 * int(nat["voos"]) / int(nat["vins"]), 2)
     (RAW / "national.json").write_text(json.dumps(nat, indent=1))
