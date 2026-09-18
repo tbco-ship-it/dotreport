@@ -1,21 +1,87 @@
 {% extends "base.html" %}
-{% block title %}{{ s.name }} trucking companies — safety report cards for the {{ '{:,}'.format(s.carriers|length) }} largest carriers | {{ site }}{% endblock %}
-{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs the national average, BASIC alerts, crashes, authority and insurance, graded A–F.{% endblock %}
+{% block title %}{{ s.name }} Trucking Companies — Safety Inspection Directory for {{ '{:,}'.format(s.carriers|length) }} Largest Carriers | {{ site }}{% endblock %}
+{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs national averages, BASIC alerts, crashes, authority and insurance, graded A–F.{% endblock %}
+
 {% block content %}
-<p class="crumbs"><a href="{{ base }}">Check a carrier</a> › <a href="{{ base }}carriers/">By state</a> › {{ s.name }}</p>
-<h1>{{ s.name }} trucking companies with 50+ trucks</h1>
-<p class="muted">{{ '{:,}'.format(s.carriers|length) }} active interstate carriers based in {{ s.name }}, sorted by fleet size. {{ s.dist }} Looking for a smaller carrier or your own number? <a href="{{ base }}">Search by USDOT, MC or name</a> — every registered carrier is covered.</p>
-<div class="tiles">
-  <div class="tile"><b>{{ '{:,}'.format(s.carriers|length) }}</b><span>Carriers listed</span></div>
-  <div class="tile"><b>{{ '{:,}'.format(s.pu) }}</b><span>Power units combined</span></div>
-  <div class="tile {{ 'bad' if s.driver_oos_rate > nat.driver_oos_rate else 'ok' }}"><b>{{ s.driver_oos_rate }}%</b><span>Driver OOS · national {{ nat.driver_oos_rate }}%</span></div>
-  <div class="tile {{ 'bad' if s.vehicle_oos_rate > nat.vehicle_oos_rate else 'ok' }}"><b>{{ s.vehicle_oos_rate }}%</b><span>Vehicle OOS · national {{ nat.vehicle_oos_rate }}%</span></div>
-  <div class="tile"><b>{{ s.grades.get('A', 0) + s.grades.get('B', 0) }}</b><span>Graded A or B</span></div>
-  <div class="tile"><b>{{ s.grades.get('D', 0) + s.grades.get('F', 0) }}</b><span>Graded D or F</span></div>
+<div class="breadcrumb">
+  <a href="{{ base }}">Carrier search</a>
+  <span>›</span>
+  <a href="{{ base }}carriers/">By state</a>
+  <span>›</span>
+  <span>{{ s.name }}</span>
 </div>
-<ul class="list">{% for c in s.carriers[:60] %}<li><a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/"><span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>{{ c.name|cname }}<span class="meta">{{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span></a></li>{% endfor %}</ul>
-{% if s.carriers|length > 60 %}<details class="fold"><summary>Show all {{ '{:,}'.format(s.carriers|length) }} carriers</summary>
-<ul class="list">{% for c in s.carriers[60:] %}<li><a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/"><span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>{{ c.name|cname }}<span class="meta">{{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span></a></li>{% endfor %}</ul></details>{% endif %}
+
+<section class="identity">
+  <div>
+    <h1 class="carrier-title">{{ s.name }} Motor Carriers (50+ Power Units)</h1>
+    <div class="meta">
+      <span><b>{{ '{:,}'.format(s.carriers|length) }}</b> active interstate carriers</span>
+      <span><b>{{ '{:,}'.format(s.pu) }}</b> power units combined</span>
+      <span>Ranked by fleet size</span>
+    </div>
+  </div>
+  <div class="snapshot">
+    <span class="rec-dot">●</span> <b>FMCSA SMS Census</b>
+    <span>Snapshot · {{ nat.sms_updated }}</span>
+  </div>
+</section>
+
+<div class="crashgrid card" style="margin-bottom:20px">
+  <div class="crashstat">
+    <strong>{{ '{:,}'.format(s.carriers|length) }}</strong>
+    <span>Carriers indexed</span>
+  </div>
+  <div class="crashstat">
+    <strong>{{ '{:,}'.format(s.pu) }}</strong>
+    <span>Total power units</span>
+  </div>
+  <div class="crashstat {{ 'crashstat--bad' if s.driver_oos_rate > nat.driver_oos_rate else '' }}">
+    <strong>{{ s.driver_oos_rate }}%</strong>
+    <span>State Driver OOS (Nat {{ nat.driver_oos_rate }}%)</span>
+  </div>
+  <div class="crashstat {{ 'crashstat--bad' if s.vehicle_oos_rate > nat.vehicle_oos_rate else '' }}">
+    <strong>{{ s.vehicle_oos_rate }}%</strong>
+    <span>State Vehicle OOS (Nat {{ nat.vehicle_oos_rate }}%)</span>
+  </div>
+  <div class="crashstat">
+    <strong>{{ s.grades.get('A', 0) + s.grades.get('B', 0) }}</strong>
+    <span>Graded A or B</span>
+  </div>
+  <div class="crashstat {{ 'crashstat--warn' if (s.grades.get('D', 0) + s.grades.get('F', 0)) > 0 else '' }}">
+    <strong>{{ s.grades.get('D', 0) + s.grades.get('F', 0) }}</strong>
+    <span>Graded D or F</span>
+  </div>
+</div>
+
+<ul class="list">
+  {% for c in s.carriers[:60] %}
+  <li>
+    <a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/">
+      <span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>
+      {{ c.name|cname }}
+      <span class="meta">{{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if s.carriers|length > 60 %}
+<details class="fold">
+  <summary>Show all {{ '{:,}'.format(s.carriers|length) }} carriers in {{ s.name }}</summary>
+  <ul class="list">
+    {% for c in s.carriers[60:] %}
+    <li>
+      <a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/">
+        <span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>
+        {{ c.name|cname }}
+        <span class="meta">{{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+
 <div class="ad-slot"><!-- ad: state --></div>
-<p class="hint">Source: FMCSA Motor Carrier Census and SMS files via data.transportation.gov, snapshot {{ nat.sms_updated }}. State = physical address on the carrier's MCS-150.</p>
+<p class="hint">Source: FMCSA Motor Carrier Census and SMS records via data.transportation.gov, snapshot {{ nat.sms_updated }}. State assignment is based on the principal address on the carrier's MCS-150 filing.</p>
 {% endblock %}

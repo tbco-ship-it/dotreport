@@ -1,70 +1,377 @@
-{# Static report card — static/app.js renders the same structure for live lookups. Keep the two in step. #}
+{# High-Trust Enterprise B2B Safety Inspection Report — static/app.js renders the same structure for live lookups #}
 {% macro money(n) %}${{ '{:,.0f}'.format(n) }}{% endmacro %}
 {% macro report(c, nat, partners, base, static_page=True) %}
 {% set g = c.grade %}
-<div class="report">
-<section class="sheet g-{{ g.letter }}">
-  <div class="sheet-top">
-    <div class="letter" aria-label="Grade {{ g.letter }}">{{ g.letter }}</div>
+{% set alerts = c.basics|selectattr('alert')|list %}
+{% set n_alerts = alerts|length %}
+{% set is_active = c.status == 'A' or not c.status %}
+{% set d_rate = c.driver_oos_rate %}
+{% set v_rate = c.vehicle_oos_rate %}
+{% set d_bad = d_rate is not none and d_rate > nat.driver_oos_rate %}
+{% set v_bad = v_rate is not none and v_rate > nat.vehicle_oos_rate %}
+
+<div class="report" id="report-card-view">
+  <section class="identity">
     <div>
-      <h2 class="sheet-name" style="margin:0">{{ c.name|cname }}{% if c.dba %} <span class="muted">(DBA {{ c.dba|cname }})</span>{% endif %}</h2>
-      <p class="sheet-sub">USDOT {{ c.dot }}{% if c.mc %} · {{ c.mc }}{% endif %} · {{ c.city }}, {{ c.state }} · <span class="score">{{ g.score }}/100</span></p>
+      <h1 class="carrier-title">{{ c.name|cname }}{% if c.dba %} <span class="dba-label">(DBA {{ c.dba|cname }})</span>{% endif %}</h1>
+      <div class="meta">
+        <span><b>USDOT</b> {{ c.dot }}</span>
+        {% if c.mc %}<span><b>MC</b> {{ c.mc }}</span>{% endif %}
+        <span>{{ c.city }}, {{ c.state }}</span>
+        <span>{{ '{:,}'.format(c.pu) }} power unit{{ '' if c.pu == 1 else 's' }}</span>
+        <span>{{ '{:,}'.format(c.drivers) }} driver{{ '' if c.drivers == 1 else 's' }}</span>
+        {% if c.classdef %}<span>{{ c.classdef|title }}</span>{% endif %}
+        {% if c.hm %}<span>Hazmat authorized</span>{% endif %}
+      </div>
     </div>
+    <div class="snapshot">
+      <span class="rec-dot">●</span> <b>Verified FMCSA Record</b>
+      <span>SMS snapshot · {{ nat.sms_updated }}</span>
+    </div>
+  </section>
+
+  <section class="overview" aria-label="Overall safety assessment">
+    <div class="gradecell">
+      <div class="grade grade--{{ g.letter }}" aria-label="Grade {{ g.letter }}">{{ g.letter }}</div>
+      <div class="scorelabel">
+        Safety score
+        <b>{{ g.score }} / 100</b>
+      </div>
+    </div>
+    <div class="decision">
+      <p class="eyebrow">Preliminary screening result</p>
+      <h2>
+        {% if g.letter == 'A' %}Eligible for dispatch — Clean safety record
+        {% elif g.letter == 'B' %}Eligible for further review
+        {% elif g.letter == 'C' %}Review required before dispatch
+        {% elif g.letter == 'D' %}Elevated risk — Detailed review required
+        {% else %}Critical issues detected — Review required
+        {% endif %}
+      </h2>
+      <p>
+        {% if not is_active %}Operating authority is currently inactive. Verify authority reinstatement before booking.
+        {% elif g.limited %}Fewer than 5 roadside inspections recorded in the last 24 months. Grade rests primarily on authority, insurance filings, and crash history.
+        {% elif g.letter == 'A' %}Operating authority active, insurance on file, zero BASIC alerts, and inspection out-of-service rates remain below national averages.
+        {% elif v_bad and n_alerts > 0 %}Vehicle out-of-service rate exceeds national average and {{ n_alerts }} BASIC alert flag is present. Confirm maintenance records before dispatch.
+        {% elif v_bad %}Vehicle out-of-service rate is above the national average. Review recent roadside maintenance inspection reports.
+        {% elif d_bad %}Driver out-of-service rate is above the national average. Review hours-of-service and driver qualification compliance.
+        {% elif n_alerts > 0 %}FMCSA public data shows {{ n_alerts }} safety BASIC alert flag. Inquire with carrier regarding corrective action.
+        {% else %}Meets standard safety baseline. Confirm specific internal cargo and insurance limit requirements prior to dispatch.
+        {% endif %}
+      </p>
+    </div>
+    <div class="deductions">
+      <div class="deductions__title">
+        <span>Score deductions</span>
+        {% set pts_off = 100 - g.score %}
+        <span>{% if pts_off > 0 %}−{{ pts_off }} pts{% else %}0 pts{% endif %}</span>
+      </div>
+      <ul>
+        {% for f in g.factors %}
+        <li>
+          <span>{{ f.label }}</span>
+          <b class="{{ 'neg' if f.points < 0 else 'zero' }}">{{ f.points if f.points < 0 else '—' }}</b>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <div class="layout">
+    <div class="stack">
+      <!-- OOS Rates Card -->
+      <section class="card" id="oos-section">
+        <header class="cardhead">
+          <div>
+            <p class="eyebrow">Inspection performance</p>
+            <h2>Out-of-service rates vs. national average</h2>
+          </div>
+          <a class="smalllink" href="{{ base }}methodology/">How this is scored</a>
+        </header>
+
+        <!-- Driver OOS -->
+        <div class="metric">
+          <div class="metric__top">
+            <div>
+              <h3>Driver out-of-service rate</h3>
+              <span class="metricvalue">{{ d_rate ~ '%' if d_rate is not none else '—' }}</span>
+              {% if d_rate is not none %}
+                {% set d_diff = (d_rate - nat.driver_oos_rate)|round(2) %}
+                <span class="delta {{ 'delta--bad' if d_diff > 0 else 'delta--good' }}">
+                  {{ '+' if d_diff > 0 else '' }}{{ d_diff }} pp vs U.S. avg ({{ nat.driver_oos_rate }}%)
+                </span>
+              {% endif %}
+            </div>
+            {% if d_rate is not none %}
+              <span class="chip {{ 'chip--bad' if d_bad else 'chip--good' }}">
+                {{ 'Above average' if d_bad else 'Below average' }}
+              </span>
+            {% else %}
+              <span class="chip chip--neutral">No inspection data</span>
+            {% endif %}
+          </div>
+          {% set d_val = [[(((d_rate or 0) / 15) * 100)|round(2), 100]|min, 0]|max %}
+          {% set d_avg = ((nat.driver_oos_rate / 15) * 100)|round(2) %}
+          <div class="gauge" style="--value:{{ d_val }}%;--avg:{{ d_avg }}%;--tone:{{ 'var(--red)' if d_bad else 'var(--green)' }}">
+            <div class="scalelabels"><span>0%</span><span>15%</span></div>
+            <div class="track">
+              <div class="fill"></div>
+              <div class="marker"><span>U.S. avg {{ nat.driver_oos_rate }}%</span></div>
+            </div>
+          </div>
+          <div class="metricfoot">
+            <span>{{ '{:,}'.format(c.driver_insp) }} driver inspections</span>
+            <span>24-month reporting window</span>
+            <span>Lower is better</span>
+          </div>
+        </div>
+
+        <!-- Vehicle OOS -->
+        <div class="metric">
+          <div class="metric__top">
+            <div>
+              <h3>Vehicle out-of-service rate</h3>
+              <span class="metricvalue">{{ v_rate ~ '%' if v_rate is not none else '—' }}</span>
+              {% if v_rate is not none %}
+                {% set v_diff = (v_rate - nat.vehicle_oos_rate)|round(2) %}
+                <span class="delta {{ 'delta--bad' if v_diff > 0 else 'delta--good' }}">
+                  {{ '+' if v_diff > 0 else '' }}{{ v_diff }} pp vs U.S. avg ({{ nat.vehicle_oos_rate }}%)
+                </span>
+              {% endif %}
+            </div>
+            {% if v_rate is not none %}
+              <span class="chip {{ 'chip--bad' if v_bad else 'chip--good' }}">
+                {{ 'Above average' if v_bad else 'Below average' }}
+              </span>
+            {% else %}
+              <span class="chip chip--neutral">No inspection data</span>
+            {% endif %}
+          </div>
+          {% set v_val = [[(((v_rate or 0) / 40) * 100)|round(2), 100]|min, 0]|max %}
+          {% set v_avg = ((nat.vehicle_oos_rate / 40) * 100)|round(2) %}
+          <div class="gauge" style="--value:{{ v_val }}%;--avg:{{ v_avg }}%;--tone:{{ 'var(--red)' if v_bad else 'var(--green)' }}">
+            <div class="scalelabels"><span>0%</span><span>40%</span></div>
+            <div class="track">
+              <div class="fill"></div>
+              <div class="marker"><span>U.S. avg {{ nat.vehicle_oos_rate }}%</span></div>
+            </div>
+          </div>
+          <div class="metricfoot">
+            <span>{{ '{:,}'.format(c.vehicle_insp) }} vehicle inspections</span>
+            <span>24-month reporting window</span>
+            <span>Lower is better</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- BASIC Status Card -->
+      <section class="card" id="basics-section">
+        <header class="cardhead">
+          <div>
+            <p class="eyebrow">FMCSA Safety Measurement System</p>
+            <h2>Safety BASICs status</h2>
+          </div>
+          <span class="chip {{ 'chip--warn' if n_alerts > 0 else 'chip--good' }}">
+            {{ n_alerts }} alert{{ '' if n_alerts == 1 else 's' }}
+          </span>
+        </header>
+        {% for b in c.basics %}
+        <div class="alertrow">
+          <div>
+            <div class="rowtitle">{{ b.label }}</div>
+            <div class="rowsub">
+              {{ b.viol }} inspection{{ '' if b.viol == 1 else 's' }} with recorded violations in last 24 months
+            </div>
+          </div>
+          {% if b.alert %}
+            <span class="chip chip--warn">Alert flag</span>
+          {% else %}
+            <span class="chip chip--good">No alert</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+        <div class="cardfoot-note">
+          <p class="hint">FMCSA hides percentile ranks for property carriers from the general public under the FAST Act. The violation counts and alert flags above are the public indicators visible to brokers, shippers, and underwriters. <a href="{{ base }}guides/check-my-csa-score/">Learn how to access carrier CSA percentiles</a>.</p>
+        </div>
+      </section>
+
+      <!-- Crash History Card -->
+      <section class="card" id="crashes-section">
+        <header class="cardhead">
+          <div>
+            <p class="eyebrow">Last 24 months</p>
+            <h2>Reportable crash history</h2>
+          </div>
+          <span class="smalllink">{{ c.crashes.total }} total crash{{ '' if c.crashes.total == 1 else 'es' }}</span>
+        </header>
+        <div class="crashgrid">
+          <div class="crashstat {{ 'crashstat--bad' if c.crashes.fatal > 0 else '' }}">
+            <strong>{{ c.crashes.fatal }}</strong>
+            <span>Fatal crashes</span>
+          </div>
+          <div class="crashstat {{ 'crashstat--warn' if c.crashes.injury > 0 else '' }}">
+            <strong>{{ c.crashes.injury }}</strong>
+            <span>Injury crashes</span>
+          </div>
+          <div class="crashstat">
+            <strong>{{ c.crashes.tow }}</strong>
+            <span>Tow-away crashes</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Profile Card -->
+      <section class="card" id="profile-section">
+        <header class="cardhead">
+          <div>
+            <p class="eyebrow">Registration & Fleet Profile</p>
+            <h2>Company operations</h2>
+          </div>
+          <span class="smalllink">USDOT since {{ c.since[:4] if c.since else '—' }}</span>
+        </header>
+        <table class="tbl">
+          <tr><th>Legal company name</th><td>{{ c.name }}</td></tr>
+          {% if c.dba %}<tr><th>Doing Business As (DBA)</th><td>{{ c.dba }}</td></tr>{% endif %}
+          <tr><th>Physical address</th><td>{{ c.street|title }}, {{ c.city }}, {{ c.state }} {{ c.zip }}</td></tr>
+          <tr><th>Operation classification</th><td>{{ c.classdef|title if c.classdef else 'Interstate Carrier' }}</td></tr>
+          <tr><th>Power units / Drivers</th><td>{{ '{:,}'.format(c.pu) }} power units / {{ '{:,}'.format(c.drivers) }} drivers</td></tr>
+          <tr><th>MCS-150 reported mileage</th><td>{{ '{:,}'.format(c.mileage) if c.mileage else '—' }}{% if c.mileage and c.mileage_year and c.mileage_year != '0' %} (year {{ c.mileage_year }}){% endif %}</td></tr>
+          <tr><th>MCS-150 last updated</th><td>{{ c.mcs150_date or '—' }}</td></tr>
+          {% if c.cargo %}<tr><th>Cargo types handled</th><td>{{ c.cargo|join(', ') }}</td></tr>{% endif %}
+        </table>
+      </section>
+
+      <!-- Insurance Table Card -->
+      <section class="card" id="insurance-section">
+        <header class="cardhead">
+          <div>
+            <p class="eyebrow">FMCSA L&I filing records</p>
+            <h2>Liability insurance on file</h2>
+          </div>
+          <a class="smalllink" href="https://li-public.fmcsa.dot.gov/LIVIEW/pkg_carrquery.prc_carrlist?n_dotno={{ c.dot }}" rel="noopener" target="_blank">Verify on FMCSA L&I</a>
+        </header>
+        {% if c.insurance %}
+        <table class="tbl">
+          {% for i in c.insurance %}
+          <tr>
+            <th>{{ i.type }} (Form {{ i.form }})</th>
+            <td>{{ money(i.amount) }} · {{ i.company }}{% if i.effective %} · Effective {{ i.effective }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% else %}
+        <div class="cardbody">
+          <p class="muted">No active liability insurance policy was located in the current open-data extract. Confirm active BMC-91 / BMC-91X filings directly on the official FMCSA Licensing & Insurance (L&I) database prior to contracting.</p>
+        </div>
+        {% endif %}
+      </section>
+
+      <!-- Sources & Confidence Note -->
+      <section class="card sourcebox" id="sources">
+        <strong>Data Confidence & Official Record Sources</strong>
+        <p>This report card combines records from FMCSA's public Motor Carrier Census, SMS roadside inspection files, and Licensing & Insurance (L&I) extracts (SMS snapshot {{ nat.sms_updated }}). The letter grade is calculated using transparent mathematical deductions based on out-of-service deviations from the national average, BASIC violation density, fleet-proportional crash history, and authority status.</p>
+        <p>A safety report card is a preliminary screening tool and does not constitute a government safety rating, insurance warranty, or binding dispatch approval. For official government records, visit the <a href="https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string={{ c.dot }}" rel="noopener" target="_blank">SAFER Carrier Snapshot</a>{% if static_page %} or the <a href="https://ai.fmcsa.dot.gov/SMS/Carrier/{{ c.dot }}/Overview.aspx" rel="noopener" target="_blank">FMCSA SMS Overview</a>{% endif %}.</p>
+      </section>
+    </div>
+
+    <!-- Right Sidebar (Sticky on Desktop) -->
+    <aside class="sticky">
+      <!-- Verification Summary Card -->
+      <section class="card verifycard">
+        <header class="cardhead">
+          <div>
+            <p class="eyebrow">Critical checks</p>
+            <h2>Verification summary</h2>
+          </div>
+          <span class="smalllink">4/4 evaluated</span>
+        </header>
+        <div class="verifyrow">
+          <div class="verifylabel">
+            <span class="dot {{ 'good' if is_active else 'bad' }}"></span>
+            Operating authority
+          </div>
+          <div class="verifyvalue">
+            {{ 'Active' if is_active else 'Inactive' }}
+            <small>{{ 'Authorized for hire' if is_active else 'Revoked or suspended' }}</small>
+          </div>
+        </div>
+        <div class="verifyrow">
+          <div class="verifylabel">
+            <span class="dot {{ 'good' if c.insurance else 'warn' }}"></span>
+            Liability insurance
+          </div>
+          <div class="verifyvalue">
+            {{ 'On file' if c.insurance else 'Check L&I' }}
+            <small>{{ 'Filing located' if c.insurance else 'Unconfirmed in extract' }}</small>
+          </div>
+        </div>
+        <div class="verifyrow">
+          <div class="verifylabel">
+            <span class="dot {{ 'good' if n_alerts == 0 else 'warn' }}"></span>
+            BASIC alert flags
+          </div>
+          <div class="verifyvalue">
+            {{ n_alerts }} alert{{ '' if n_alerts == 1 else 's' }}
+            <small>{{ 'Zero alerts' if n_alerts == 0 else alerts[0].label }}</small>
+          </div>
+        </div>
+        <div class="verifyrow">
+          <div class="verifylabel">
+            <span class="dot {{ 'bad' if v_bad else 'good' }}"></span>
+            Vehicle OOS rate
+          </div>
+          <div class="verifyvalue">
+            {{ 'Above average' if v_bad else 'Below average' }}
+            <small>{{ v_rate ~ '%' if v_rate is not none else 'No data' }}</small>
+          </div>
+        </div>
+
+        <div class="review">
+          <b>
+            {% if not is_active %}Critical issue: Inactive authority
+            {% elif g.letter in 'DF' or v_bad or n_alerts > 0 %}Review required before dispatch
+            {% else %}Eligible for review
+            {% endif %}
+          </b>
+          <p>
+            {% if not is_active %}This carrier does not hold active operating authority according to FMCSA records. Do not dispatch until active status is confirmed.
+            {% elif v_bad or n_alerts > 0 %}Confirm recent roadside repair records, active certificate of insurance, and specific broker compliance guidelines.
+            {% else %}Carrier record shows active credentials and acceptable performance metrics across all critical checkpoints.
+            {% endif %}
+          </p>
+          <button class="button" type="button" onclick="window.print()">Download inspection report</button>
+          <button class="button button--secondary" type="button" onclick="window.copyReportLink(this)">Copy report link</button>
+        </div>
+      </section>
+
+      <!-- Partner Offers (Commercial Insurance & Factoring) -->
+      {% set live_partners = partners.values()|selectattr('url')|list %}
+      <section class="card partner">
+        <span class="partnerlabel">Partner offer · Does not affect safety score</span>
+        <h3>Commercial coverage & cash flow</h3>
+        <p>Independent services for motor carriers and owner-operators. Commercial partnerships operate independently from DOT Report Card scoring.</p>
+        <div class="partner-list">
+          {% for p in partners.values() if p.url and (not p.when or g.letter in p.when) %}
+          <a class="partner-link" href="{{ p.url }}" rel="sponsored noopener" target="_blank" data-slot="{{ p.key }}">
+            <b>{{ p.headline }}</b>
+            <span>{{ p.blurb }}</span>
+            <em>{{ p.cta }} →</em>
+          </a>
+          {% endfor %}
+          {% if g.letter in 'CDF' %}
+          <a class="partner-link" href="{{ base }}guides/dataqs-challenge/">
+            <b>DataQs violation challenge guide</b>
+            <span>Remove erroneous roadside citations from your permanent record.</span>
+            <em>Read guide →</em>
+          </a>
+          {% endif %}
+        </div>
+        {% if live_partners %}
+        <p class="disclosure">Partner links may pay a referral commission upon sign-up. Commercial agreements have no bearing on carrier grades or calculations.</p>
+        {% endif %}
+      </section>
+    </aside>
   </div>
-  <div class="chips">
-    <span class="chip {{ 'ok' if c.status == 'A' or not c.status else 'bad' }}">{{ 'Active' if c.status == 'A' or not c.status else 'Inactive' }} USDOT</span>
-    {% if c.mc %}<span class="chip {{ 'ok' if c.mc_status == 'A' else 'bad' }}">{{ c.mc }} {{ 'active' if c.mc_status == 'A' else 'not active' }}</span>{% endif %}
-    <span class="chip">{{ '{:,}'.format(c.pu) }} power unit{{ '' if c.pu == 1 else 's' }}</span>
-    <span class="chip">{{ '{:,}'.format(c.drivers) }} driver{{ '' if c.drivers == 1 else 's' }}</span>
-    {% if c.hm %}<span class="chip">Hazmat</span>{% endif %}
-  </div>
-  <ul class="factors">
-  {% for f in g.factors %}<li><b>{{ f.label }}</b><span class="pts {{ 'neg' if f.points < 0 else 'zero' }}">{{ f.points if f.points < 0 else '—' }}</span><small>{{ f.note }}</small></li>{% endfor %}
-  </ul>
-  {% if g.limited %}<p class="limited">Fewer than 5 roadside inspections in the last 24 months, so this grade rests mostly on authority, insurance and crash records. A clean but thin record is not the same as a proven one.</p>{% endif %}
-</section>
-
-<div class="tiles">
-  <div class="tile"><b>{{ '{:,}'.format(c.insp) }}</b><span>Inspections, 24 months</span></div>
-  <div class="tile {{ 'bad' if c.driver_oos_rate is not none and c.driver_oos_rate > nat.driver_oos_rate else 'ok' if c.driver_oos_rate is not none else '' }}"><b>{{ c.driver_oos_rate ~ '%' if c.driver_oos_rate is not none else '—' }}</b><span>Driver OOS · national {{ nat.driver_oos_rate }}%</span></div>
-  <div class="tile {{ 'bad' if c.vehicle_oos_rate is not none and c.vehicle_oos_rate > nat.vehicle_oos_rate else 'ok' if c.vehicle_oos_rate is not none else '' }}"><b>{{ c.vehicle_oos_rate ~ '%' if c.vehicle_oos_rate is not none else '—' }}</b><span>Vehicle OOS · national {{ nat.vehicle_oos_rate }}%</span></div>
-  <div class="tile {{ 'bad' if c.crashes.fatal else '' }}"><b>{{ c.crashes.total }}</b><span>Crashes{% if c.crashes.fatal %} · {{ c.crashes.fatal }} fatal{% endif %}{% if c.crashes.injury %} · {{ c.crashes.injury }} injury{% endif %}</span></div>
-  <div class="tile"><b>{{ c.basics|selectattr('alert')|list|length }}</b><span>BASIC alerts</span></div>
-  <div class="tile"><b>{{ c.since[:4] if c.since else '—' }}</b><span>USDOT since</span></div>
-</div>
-
-<table class="tbl"><caption>Safety BASICs (public SMS file)</caption>
-{% for b in c.basics %}<tr><th>{{ b.label }}</th><td>{{ b.viol }} inspection{{ '' if b.viol == 1 else 's' }} with violations · <span class="{{ 'alert-y' if b.alert else 'alert-n' }}">{{ 'ALERT' if b.alert else 'no alert' }}</span></td></tr>{% endfor %}
-</table>
-<p class="hint">FMCSA hides percentile scores for property carriers from the public. The counts above and the alert flag are what anyone — including brokers and insurers — can see. <a href="{{ base }}guides/check-my-csa-score/">How to see your full CSA percentiles</a>.</p>
-
-<table class="tbl"><caption>Company profile</caption>
-<tr><th>Legal name</th><td>{{ c.name }}</td></tr>
-{% if c.dba %}<tr><th>DBA</th><td>{{ c.dba }}</td></tr>{% endif %}
-<tr><th>Physical address</th><td>{{ c.street|title }}, {{ c.city }}, {{ c.state }} {{ c.zip }}</td></tr>
-<tr><th>Operation</th><td>{{ c.classdef|title if c.classdef else '—' }}</td></tr>
-<tr><th>Power units / drivers</th><td>{{ '{:,}'.format(c.pu) }} / {{ '{:,}'.format(c.drivers) }}</td></tr>
-<tr><th>MCS-150 mileage</th><td>{{ '{:,}'.format(c.mileage) if c.mileage else '—' }}{% if c.mileage and c.mileage_year and c.mileage_year != '0' %} ({{ c.mileage_year }}){% endif %}</td></tr>
-<tr><th>MCS-150 last updated</th><td>{{ c.mcs150_date or '—' }}</td></tr>
-{% if c.cargo %}<tr><th>Cargo carried</th><td>{{ c.cargo|join(', ') }}</td></tr>{% endif %}
-</table>
-
-<table class="tbl"><caption>Insurance on file with FMCSA</caption>
-{% for i in c.insurance %}<tr><th>{{ i.type }} ({{ i.form }})</th><td>{{ money(i.amount) }} · {{ i.company }}{% if i.effective %} · since {{ i.effective }}{% endif %}</td></tr>{% else %}<tr><th>Filings</th><td>Not in FMCSA's open-data extract — <a href="https://li-public.fmcsa.dot.gov/LIVIEW/pkg_carrquery.prc_carrlist?n_dotno={{ c.dot }}" rel="noopener">check L&amp;I</a></td></tr>{% endfor %}
-</table>
-
-{% set live = partners.values()|selectattr('url')|list %}
-<div class="sec"><div class="sec-h"><h2>What to do next</h2></div>
-<div class="steps">
-{% for p in partners.values() if p.url and (not p.when or g.letter in p.when) %}
-  <a class="step" href="{{ p.url }}" rel="sponsored noopener" target="_blank" data-slot="{{ p.key }}"><b>{{ p.headline }}</b><span>{{ p.blurb }}</span><em>{{ p.cta }} →</em></a>
-{% endfor %}
-  {% if g.letter in 'CDF' %}<a class="step" href="{{ base }}guides/dataqs-challenge/"><b>Think a violation is wrong? Challenge it through DataQs</b><span>Successful DataQs requests remove the violation from your record and re-run the numbers on this page.</span><em>Read the guide →</em></a>{% endif %}
-  <a class="step" href="{{ base }}guides/roadside-inspection-checklist/"><b>Stay off the out-of-service list</b><span>The violations that most often park a truck at the scale, and the 10-minute pre-trip that catches them.</span><em>Checklist →</em></a>
-  <a class="step" href="{{ base }}guides/insurance-requirements/"><b>Know what insurance FMCSA actually requires</b><span>$750k vs $1M vs $5M liability, cargo, and what a lapsed BMC-91X filing does to your authority.</span><em>Requirements →</em></a>
-</div>
-{% if live %}<p class="disclosure">Links marked with a partner name may pay us a referral fee if you sign up. It never changes the grade or the order of anything on this page.</p>{% endif %}
-</div>
-<p class="hint">Source: FMCSA Motor Carrier Census, SMS BASICs, L&amp;I insurance and crash files via data.transportation.gov, SMS snapshot {{ nat.sms_updated }}. Official record: <a href="https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string={{ c.dot }}" rel="noopener">SAFER company snapshot</a>{% if static_page %} · <a href="https://ai.fmcsa.dot.gov/SMS/Carrier/{{ c.dot }}/Overview.aspx" rel="noopener">SMS overview</a>{% endif %}.</p>
+  <p class="disclaimer">DOT Report Card provides an informational screening summary and does not certify a carrier as safe, compliant, insured, or suitable for any shipment. Verify current government records and your organization’s requirements before contracting or dispatching.</p>
 </div>
 {% endmacro %}

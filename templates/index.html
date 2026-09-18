@@ -1,37 +1,95 @@
 {% extends "base.html" %}
-{% block title %}DOT Report Card — free USDOT / MC number check with a plain-English safety grade{% endblock %}
+{% block title %}DOT Report Card — Free USDOT &amp; MC Safety Inspection Screening{% endblock %}
 {% block head %}<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"{{ site }}","applicationCategory":"BusinessApplication","inLanguage":"en","url":"{{ origin }}{{ base }}","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 <script>if(!location.hash&&!location.search)document.documentElement.classList.add('landing')</script>{% endblock %}
+
 {% block content %}
-<section class="hero">
-  <h1>What's on your DOT report card?</h1>
-  <p>Type a USDOT number, MC number or company name. You get the same public FMCSA record a broker or insurer pulls — out-of-service rates against the national average, BASIC alerts, crashes, authority and insurance — graded A to F so you know where you stand.</p>
-</section>
+<div class="stage" id="stage">
+  <section class="hero">
+    <div class="hero-badge">Official FMCSA Public Records · 2026 Snapshot</div>
+    <h1>U.S. Carrier Safety Inspection &amp; Report Card</h1>
+    <p>Search any USDOT number, MC number, or motor carrier name. Instantly inspect out-of-service rates vs. national benchmarks, BASIC safety alerts, 24-month crash records, operating authority, and active liability filings.</p>
+  </section>
 
-<div class="card" id="lookup">
-  <p class="card-title">USDOT number, MC number or company name</p>
-  <label class="field"><span class="visually-hidden" hidden>Carrier</span>
-    <input id="q" class="pick" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="e.g. 54283, MC-136818 or Swift Transportation" aria-label="USDOT number, MC number or company name">
-  </label>
-  <div class="actions"><button id="go" class="next primary" type="button">Show my report card</button><button class="next" type="button" data-demo="54283">Try an example</button></div>
-  <p id="msg" class="err" hidden></p>
-  <p class="hint">Free, no sign-up. Nothing you type is stored — the lookup goes straight to FMCSA's open-data API.</p>
+  <div class="card search-card" id="lookup">
+    <p class="card-title">USDOT number, MC number, or carrier legal name</p>
+    <label class="field"><span class="visually-hidden" hidden>Carrier identifier</span>
+      <input id="q" class="pick" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="e.g. 54283, MC-136818, or Swift Transportation" aria-label="USDOT number, MC number, or carrier name">
+    </label>
+    <div class="actions">
+      <button id="go" class="next primary" type="button">Inspect carrier</button>
+      <div class="demo-pills">
+        <span class="demo-label">Examples:</span>
+        <button class="demo-chip" type="button" data-demo="54283">Swift (54283)</button>
+        <button class="demo-chip" type="button" data-demo="53467">Knight (53467)</button>
+        <button class="demo-chip" type="button" data-demo="123456">Werner (123456)</button>
+      </div>
+    </div>
+    <p id="msg" class="err" hidden></p>
+    <p class="hint">Free public utility for shippers, brokers, and owner-operators. Direct query to FMCSA open safety datasets without registration.</p>
+  </div>
+
+  <div id="result" class="result" aria-live="polite"></div>
 </div>
-<div id="result" class="result" aria-live="polite"></div>
 
-<div class="sec"><div class="sec-h"><h2>How the grade works</h2><a href="{{ base }}methodology/">Full methodology</a></div>
-<div class="prose">
-<p>Every carrier starts at 100. Points come off for a driver or vehicle out-of-service rate above the national average ({{ nat.driver_oos_rate }}% / {{ nat.vehicle_oos_rate }}%, computed from the current SMS file), for each BASIC alert flag, for crashes relative to fleet size, for inactive operating authority and for a missing liability filing. Fewer than 5 inspections and we say so instead of pretending.</p>
-<p>What you can't get here — or anywhere public — is your CSA percentile. FMCSA hides those for property carriers. <a href="{{ base }}guides/check-my-csa-score/">Here's how to log in and see them.</a></p>
-</div></div>
+<div class="more" id="more">
+  <div class="sec">
+    <div class="sec-h">
+      <h2>Scoring methodology &amp; benchmarks</h2>
+      <a class="smalllink" href="{{ base }}methodology/">Full grading methodology →</a>
+    </div>
+    <div class="prose">
+      <p>Every registered carrier starts with a baseline score of 100. Deductions are systematically calculated using objective deviations from current national safety standards:</p>
+      <ul>
+        <li><strong>Out-of-Service Deviations:</strong> Penalties applied when driver OOS exceeds {{ nat.driver_oos_rate }}% or vehicle OOS exceeds {{ nat.vehicle_oos_rate }}% (computed from the active FMCSA SMS release).</li>
+        <li><strong>BASIC Safety Alerts:</strong> −15 points per acute alert flag across Unsafe Driving, Hours of Service, Vehicle Maintenance, and Controlled Substances.</li>
+        <li><strong>Fleet-Proportional Crashes:</strong> Penalties scaled to carrier power unit count for fatal and injury collision history over the past 24 months.</li>
+        <li><strong>Legal Credentials:</strong> −40 points for inactive or revoked operating authority; −20 points for missing mandatory BMC-91X liability filings.</li>
+      </ul>
+      <p>FMCSA restricts public CSA percentile displays for property motor carriers under the FAST Act. <a href="{{ base }}guides/check-my-csa-score/">Learn how authorized carriers view complete internal CSA percentiles</a>.</p>
+    </div>
+  </div>
 
-<div class="sec"><div class="sec-h"><h2>Largest carriers by state</h2><a href="{{ base }}carriers/">All states</a></div>
-<div class="states">{% for s in states[:12] %}<a href="{{ base }}carriers/{{ s.code|lower }}/">{{ s.name }}<span>{{ '{:,}'.format(s.n) }}</span></a>{% endfor %}</div>
-</div>
+  <div class="sec">
+    <div class="sec-h">
+      <h2>Largest interstate carriers by state</h2>
+      <a class="smalllink" href="{{ base }}carriers/">View all 50 states →</a>
+    </div>
+    <div class="states">
+      {% for s in states[:12] %}
+      <a href="{{ base }}carriers/{{ s.code|lower }}/">
+        {{ s.name }}
+        <span>{{ '{:,}'.format(s.n) }} carriers</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
 
-<div class="sec"><div class="sec-h"><h2>Guides for owner-operators</h2><a href="{{ base }}guides/">All guides</a></div>
-<ul class="list">{% for g in guides %}<li><a href="{{ base }}guides/{{ g.slug }}/">{{ g.title }}</a></li>{% endfor %}</ul>
+  <div class="sec">
+    <div class="sec-h">
+      <h2>Carrier &amp; compliance guides</h2>
+      <a class="smalllink" href="{{ base }}guides/">All compliance guides →</a>
+    </div>
+    <ul class="list">
+      {% for g in guides %}
+      <li>
+        <a href="{{ base }}guides/{{ g.slug }}/">
+          {{ g.title }}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
 </div>
 {% endblock %}
-{% block scripts %}<script>window.NAT={{ nat|tojson }};window.PARTNERS={{ partners|tojson }};window.API="{{ api }}";window.BASE="{{ base }}"</script>
-<script src="{{ base }}static/grade.js?v={{ v }}" defer></script><script src="{{ base }}static/app.js?v={{ v }}" defer></script>{% endblock %}
+
+{% block scripts %}
+<script>
+window.NAT = {{ nat|tojson }};
+window.PARTNERS = {{ partners|tojson }};
+window.API = "{{ api }}";
+window.BASE = "{{ base }}";
+</script>
+<script src="{{ base }}static/grade.js?v={{ v }}" defer></script>
+<script src="{{ base }}static/app.js?v={{ v }}" defer></script>
+{% endblock %}

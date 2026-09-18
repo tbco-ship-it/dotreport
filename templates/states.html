@@ -1,9 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Trucking companies by state — FMCSA safety report cards for {{ '{:,}'.format(n_carriers) }} carriers with 50+ trucks | {{ site }}{% endblock %}
-{% block description %}Browse safety report cards for {{ '{:,}'.format(n_carriers) }} active interstate motor carriers with 50 or more power units, by home state.{% endblock %}
+{% block title %}Motor Carriers by State — FMCSA Safety Inspection Directory (50+ Trucks) | {{ site }}{% endblock %}
+{% block description %}Browse safety report cards for {{ '{:,}'.format(n_carriers) }} active interstate motor carriers with 50 or more power units across all 50 U.S. states.{% endblock %}
+
 {% block content %}
-<p class="crumbs"><a href="{{ base }}">Check a carrier</a> › By state</p>
-<h1>Trucking companies by state</h1>
-<p class="muted">{{ '{:,}'.format(n_carriers) }} active interstate carriers with 50+ power units, graded from FMCSA's public data. Smaller carriers aren't listed here but every USDOT number works in the <a href="{{ base }}">search</a>.</p>
-<div class="states">{% for s in states %}<a href="{{ base }}carriers/{{ s.code|lower }}/">{{ s.name }}<span>{{ '{:,}'.format(s.n) }}</span></a>{% endfor %}</div>
+<div class="breadcrumb">
+  <a href="{{ base }}">Carrier search</a>
+  <span>›</span>
+  <span>By state</span>
+</div>
+
+<section class="identity">
+  <div>
+    <h1 class="carrier-title">Motor Carriers by State Directory</h1>
+    <div class="meta">
+      <span><b>{{ '{:,}'.format(n_carriers) }}</b> active interstate carriers (≥50 power units)</span>
+      <span>Browse by official MCS-150 domicile state</span>
+    </div>
+  </div>
+  <div class="snapshot">
+    <span class="rec-dot">●</span> <b>FMCSA National Census</b>
+    <span>Live search covers all 4.5M carriers</span>
+  </div>
+</section>
+
+<div class="states">
+  {% for s in states %}
+  <a href="{{ base }}carriers/{{ s.code|lower }}/">
+    {{ s.name }}
+    <span>{{ '{:,}'.format(s.n) }}</span>
+  </a>
+  {% endfor %}
+</div>
 {% endblock %}

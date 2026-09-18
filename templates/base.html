@@ -4,33 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ site }}{% endblock %}</title>
-<meta name="description" content="{% block description %}Type a USDOT or MC number and get a plain-English report card built from FMCSA's public safety data: out-of-service rates vs the national average, BASIC alerts, crashes, authority and insurance on file.{% endblock %}">
+<meta name="description" content="{% block description %}Type a USDOT or MC number and get a plain-English safety inspection report built from FMCSA public records: out-of-service rates vs national averages, BASIC alerts, crashes, authority and insurance.{% endblock %}">
 <link rel="canonical" href="{{ origin }}{{ base }}{{ path }}">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preload" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></noscript>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f2744'/%3E%3Cpath d='M8 9h11l5 5v9H8z' fill='none' stroke='%23fff' stroke-width='2.4'/%3E%3Cpath d='M19 9v5h5M12 18l2.3 2.3L20 14.7' fill='none' stroke='%2322c55e' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ base }}static/style.css?v={{ v }}">
-<link rel="icon" href="{{ base }}static/favicon.svg?v={{ v }}" type="image/svg+xml">
 {% if adsense_pub %}<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{{ adsense_pub }}" crossorigin="anonymous"></script>{% endif %}
 {% block head %}{% endblock %}
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="{{ base }}">DOT<em>ReportCard</em></a>
-  <nav>
-    <a href="{{ base }}">Check a carrier</a>
-    <a href="{{ base }}carriers/">By state</a>
-    <a href="{{ base }}guides/">Guides</a>
-    <a href="{{ base }}methodology/">How grades work</a>
-  </nav>
+<header class="topbar">
+  <div class="topbar__in">
+    <a class="brand" href="{{ base }}"><span class="brandmark">DR</span> DOT<em>ReportCard</em></a>
+    <nav class="topnav" aria-label="Primary">
+      <a href="{{ base }}">Check a carrier</a>
+      <a href="{{ base }}carriers/">By state</a>
+      <a href="{{ base }}guides/">Guides</a>
+      <a href="{{ base }}methodology/">How grades work</a>
+    </nav>
+  </div>
 </header>
-<main>
+<main class="shell">
 {% block content %}{% endblock %}
 </main>
 <footer>
   <p><a href="{{ base }}about/">About</a> · <a href="{{ base }}methodology/">Methodology &amp; data sources</a> · <a href="{{ base }}privacy/">Privacy</a> · <a href="{{ base }}contact/">Contact</a></p>
-  <p>Built from FMCSA's public Motor Carrier Census, SMS, insurance and crash files on data.transportation.gov (SMS snapshot {{ nat.sms_updated }}). The letter grade is our reading of that public data, not an FMCSA safety rating. Always confirm with <a href="https://safer.fmcsa.dot.gov/" rel="noopener">SAFER</a> before a business decision.</p>
+  <p>Built from FMCSA's public Motor Carrier Census, SMS, insurance and crash files via data.transportation.gov (SMS snapshot {{ nat.sms_updated }}). The letter grade is our independent reading of public safety records, not an official FMCSA safety rating. Always verify current operating authority and insurance filings with <a href="https://safer.fmcsa.dot.gov/" rel="noopener" target="_blank">SAFER</a> before dispatching or contracting.</p>
 </footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="{{ base }}static/ui.js?v={{ v }}" defer></script>
 {% block scripts %}{% endblock %}
 </body>
