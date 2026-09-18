@@ -1,0 +1,38 @@
+name: Report QA
+on:
+  push:
+    branches: ['fix/report-trust-20260918']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pip install jinja2
+      - name: Capture exact public source for reproducible review
+        run: git archive --format=tar HEAD > /tmp/report-source.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report-source
+          path: /tmp/report-source.tar
+          retention-days: 7
+      - name: Regression tests
+        run: |
+          if [ -d tests ]; then python -m unittest discover -s tests -v; fi
+          node scripts/test_grade.mjs
+      - name: Build all carrier reports
+        run: python scripts/build.py --base / --origin https://dotreportcard.com --cname dotreportcard.com --api https://api.dotreportcard.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report-qa-site
+          path: dist
+          retention-days: 7
