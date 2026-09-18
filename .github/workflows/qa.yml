@@ -32,6 +32,8 @@ jobs:
           node scripts/test_grade.mjs
       - name: Build all carrier reports
         run: python scripts/build.py --base / --origin https://dotreportcard.com --cname dotreportcard.com --api https://api.dotreportcard.com
+      - name: Validate every generated report
+        run: python scripts/validate_site.py
       - uses: actions/upload-artifact@v4
         with:
           name: report-qa-site
