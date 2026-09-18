@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ s.name }} Trucking Companies — Safety Inspection Directory for {{ '{:,}'.format(s.carriers|length) }} Largest Carriers | {{ site }}{% endblock %}
-{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs national averages, BASIC alerts, crashes, authority and insurance, graded A–F.{% endblock %}
+{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs national averages, public acute/critical indicators, crashes, authority and insurance, graded A–F.{% endblock %}
 
 {% block content %}
 <div class="breadcrumb">
@@ -22,7 +22,7 @@
   </div>
   <div class="snapshot">
     <span class="rec-dot">●</span> <b>FMCSA SMS Census</b>
-    <span>Snapshot · {{ nat.sms_updated }}</span>
+    <span>Dataset updated · {{ nat.sms_updated }}</span>
   </div>
 </section>
 
@@ -37,11 +37,11 @@
   </div>
   <div class="crashstat {{ 'crashstat--bad' if s.driver_oos_rate > nat.driver_oos_rate else '' }}">
     <strong>{{ s.driver_oos_rate }}%</strong>
-    <span>State Driver OOS (Nat {{ nat.driver_oos_rate }}%)</span>
+    <span>Indexed Driver OOS (Nat {{ nat.driver_oos_rate }}%)</span>
   </div>
   <div class="crashstat {{ 'crashstat--bad' if s.vehicle_oos_rate > nat.vehicle_oos_rate else '' }}">
     <strong>{{ s.vehicle_oos_rate }}%</strong>
-    <span>State Vehicle OOS (Nat {{ nat.vehicle_oos_rate }}%)</span>
+    <span>Indexed Vehicle OOS (Nat {{ nat.vehicle_oos_rate }}%)</span>
   </div>
   <div class="crashstat">
     <strong>{{ s.grades.get('A', 0) + s.grades.get('B', 0) }}</strong>
@@ -53,6 +53,7 @@
   </div>
 </div>
 
+<p class="hint">{{ s.grades.get('NR', 0) }} carriers are not rated (NR). Figures cover this indexed fleet-size subset, not all carriers in the state.</p>
 <ul class="list">
   {% for c in s.carriers[:60] %}
   <li>
@@ -83,5 +84,5 @@
 {% endif %}
 
 <div class="ad-slot"><!-- ad: state --></div>
-<p class="hint">Source: FMCSA Motor Carrier Census and SMS records via data.transportation.gov, snapshot {{ nat.sms_updated }}. State assignment is based on the principal address on the carrier's MCS-150 filing.</p>
+<p class="hint">Source: FMCSA Motor Carrier Census and SMS records via data.transportation.gov, dataset last updated {{ nat.sms_updated }}. State assignment is based on the principal address on the carrier's MCS-150 filing.</p>
 {% endblock %}

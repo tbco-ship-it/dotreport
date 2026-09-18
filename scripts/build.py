@@ -10,6 +10,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from grading import assess_many
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
@@ -56,6 +57,9 @@ def main():
                 if c["state"] in STATES and not (c["pu"] >= 200 and c["drivers"] * 10 < c["pu"])]
     nat = json.loads((ROOT / "data/national.json").read_text())
     partners = json.loads((ROOT / "data/partners.json").read_text())
+    for c, view in zip(carriers, assess_many(carriers, nat)):
+        c["view"] = view
+        c["grade"] = view["grade"]
     by_state = defaultdict(list)
     for c in carriers:
         by_state[c["state"]].append(c)
@@ -63,12 +67,12 @@ def main():
     for code, cs in by_state.items():
         if code not in STATES:
             continue
-        di, do = sum(c["driver_insp"] for c in cs), sum(c["driver_oos"] for c in cs)
-        vi, vo = sum(c["vehicle_insp"] for c in cs), sum(c["vehicle_oos"] for c in cs)
+        di, do = sum(c.get("driver_insp") or 0 for c in cs), sum(c.get("driver_oos") or 0 for c in cs)
+        vi, vo = sum(c.get("vehicle_insp") or 0 for c in cs), sum(c.get("vehicle_oos") or 0 for c in cs)
         grades = Counter(c["grade"]["letter"] for c in cs)
         states.append({"code": code, "name": STATES[code], "carriers": cs, "n": len(cs), "pu": sum(c["pu"] for c in cs), "grades": grades,
                        "driver_oos_rate": round(100 * do / di, 1) if di else 0, "vehicle_oos_rate": round(100 * vo / vi, 1) if vi else 0,
-                       "dist": f"{grades.get('A', 0) + grades.get('B', 0)} are graded A or B, {grades.get('D', 0) + grades.get('F', 0)} D or F."})
+                       "dist": f"{grades.get('A', 0) + grades.get('B', 0)} are graded A or B, {grades.get('D', 0) + grades.get('F', 0)} D or F; {grades.get('NR', 0)} not rated."})
     states.sort(key=lambda s: -s["n"])
     guides = []
     for f in sorted((ROOT / "content/guides").glob("*.html")):

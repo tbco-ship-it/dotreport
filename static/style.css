@@ -1119,3 +1119,10 @@ footer p { margin: 6px 0; }
   .layout { display: block; }
   .sticky { position: static; }
 }
+
+/* Trust policy 2: unknown is neutral, never green. */
+.grade--NR, .g-NR { background: var(--surface, #f3f4f6); color: var(--muted, #596579); border: 1px solid var(--border, #dfe4ea); }
+.dot.neutral { background: var(--muted, #596579); }
+.verifyvalue { overflow-wrap: anywhere; }
+.crashstat strong { overflow-wrap: anywhere; }
+@media (max-width: 760px) { .layout > aside { order: -1; position: static; } }

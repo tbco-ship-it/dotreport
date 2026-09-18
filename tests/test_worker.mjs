@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { normalize } from '../worker/api.mjs';
+const c = { dot_number:'1', legal_name:'TEST CARRIER' };
+const r = normalize(c, {}, [], [{ report_date:'01-AUG-26', fatalities:'2', injuries:'3', tow_away:'Y' }]);
+assert.equal(r.schema_version, 2);
+assert.equal(r.crashes.fatal_crashes, 1);
+assert.equal(r.crashes.injury_crashes, 1);
+assert.equal(r.crashes.fatalities, 2);
+assert.equal(r.crashes.injuries, 3);
+assert.equal(r.driver_oos_rate, null);
+assert.equal(r.vehicle_insp, null);
+assert.equal(r.basics[0].ac, null);
+const missing = normalize(c, {}, [], [{ report_date:'01-AUG-26' }]);
+assert.equal(missing.crashes.fatal_crashes, null);
+console.log('Worker normalization: 10 assertions passed');

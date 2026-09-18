@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_report.html" import report %}
 {% block title %}{{ c.name|cname }} — USDOT {{ c.dot }}{% if c.mc %} / {{ c.mc }}{% endif %} Safety Inspection Report, Grade {{ c.grade.letter }} | {{ site }}{% endblock %}
-{% block description %}{{ c.name|cname }}, {{ c.city }}, {{ c.state }}: USDOT {{ c.dot }}{% if c.mc %}, {{ c.mc }}{% endif %}. {{ '{:,}'.format(c.pu) }} power units, {{ '{:,}'.format(c.insp) }} inspections in 24 months, driver OOS {{ c.driver_oos_rate if c.driver_oos_rate is not none else '—' }}% (national {{ nat.driver_oos_rate }}%), vehicle OOS {{ c.vehicle_oos_rate if c.vehicle_oos_rate is not none else '—' }}%, {{ c.crashes.total }} crashes, {{ c.basics|selectattr('alert')|list|length }} BASIC alerts. Grade {{ c.grade.letter }} ({{ c.grade.score }}/100) from public FMCSA records.{% endblock %}
+{% block description %}{{ c.name|cname }}, {{ c.city }}, {{ c.state }}: USDOT {{ c.dot }}{% if c.mc %}, {{ c.mc }}{% endif %}. {{ '{:,}'.format(c.pu) }} power units, {{ '{:,}'.format(c.insp or 0) }} inspections in 24 months, driver OOS {{ c.driver_oos_rate if c.driver_oos_rate is not none else '—' }}% (national {{ nat.driver_oos_rate }}%), vehicle OOS {{ c.vehicle_oos_rate if c.vehicle_oos_rate is not none else '—' }}%, {{ c.crashes.total }} crashes, {{ c.view.basics|selectattr('ac', 'equalto', true)|list|length }} indicated public acute/critical flags (not a full SMS alert assessment). Grade {{ c.grade.letter }} {% if c.grade.score is not none %}({{ c.grade.score }}/100){% else %}(not rated: insufficient evidence){% endif %} from public FMCSA records.{% endblock %}
 {% block head %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Organization","name":c.name,"address":{"@type":"PostalAddress","streetAddress":c.street,"addressLocality":c.city,"addressRegion":c.state,"postalCode":c.zip,"addressCountry":"US"},"identifier":[{"@type":"PropertyValue","propertyID":"USDOT","value":c.dot|string}] + ([{"@type":"PropertyValue","propertyID":"MC","value":c.mc}] if c.mc else []),"url":origin ~ base ~ path}|tojson }}</script>{% endblock %}
 
 {% block content %}
@@ -35,5 +35,7 @@
   </ul>
 </div>
 
-<p class="hint">Looking for another carrier? <a href="{{ base }}">Search by USDOT, MC number, or legal name</a> — over 4.5 million registered motor carriers are searchable.</p>
+<p class="hint">Looking for another carrier? <a href="{{ base }}">Search by USDOT, MC number, or legal name</a> — searches the public Motor Carrier Census.</p>
 {% endblock %}
+
+{% block scripts %}<script src="{{ base }}static/app.js?v={{ v }}" defer></script>{% endblock %}
