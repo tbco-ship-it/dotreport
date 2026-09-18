@@ -1,49 +1,44 @@
-// DOT Report Card grade from public FMCSA data. Mirror of scripts/grading.py — change both, then run scripts/test_grade.mjs.
+// Independent screening index v2.0.0. Exact mirror: scripts/grading.py.
 (function (root) {
   const MIN_INSP = 5;
-  const money = n => "$" + Math.round(n).toLocaleString("en-US");
-  const f1 = x => x.toFixed(1), f2 = x => { const s = String(Math.round(x * 100) / 100); return s.includes(".") ? s : s + ".0"; };  // match Python repr of round(x, 1/2)
+  const number = x => typeof x === 'number' && Number.isFinite(x);
+  const validRate = (r, count) => number(count) && count >= MIN_INSP && number(r) && r >= 0 && r <= 100;
   function grade(c, nat) {
-    let score = 100; const factors = [];
-    const add = (key, label, points, note) => { score += points; factors.push({ key, label, points, note }); };
-
-    if (c.driver_insp >= MIN_INSP && c.driver_oos_rate != null) {
-      const r = f1(c.driver_oos_rate), n = nat.driver_oos_rate;
-      if (r >= 2 * n) add("driver_oos", "Driver out-of-service rate", -25, `${r}% vs ${n}% national — more than double`);
-      else if (r > n) add("driver_oos", "Driver out-of-service rate", -10, `${r}% vs ${n}% national — above average`);
-      else add("driver_oos", "Driver out-of-service rate", 0, `${r}% vs ${n}% national — at or below average`);
-    } else add("driver_oos", "Driver out-of-service rate", 0, "not enough inspections to judge");
-
-    if (c.vehicle_insp >= MIN_INSP && c.vehicle_oos_rate != null) {
-      const r = f1(c.vehicle_oos_rate), n = nat.vehicle_oos_rate;
-      if (r >= 1.5 * n) add("vehicle_oos", "Vehicle out-of-service rate", -25, `${r}% vs ${n}% national — 1.5× or worse`);
-      else if (r > n) add("vehicle_oos", "Vehicle out-of-service rate", -10, `${r}% vs ${n}% national — above average`);
-      else add("vehicle_oos", "Vehicle out-of-service rate", 0, `${r}% vs ${n}% national — at or below average`);
-    } else add("vehicle_oos", "Vehicle out-of-service rate", 0, "not enough inspections to judge");
-
-    const alerts = c.basics.filter(b => b.alert).map(b => b.label);
-    add("basics", "BASIC alerts", -15 * alerts.length, alerts.length ? alerts.join(", ") : "no BASIC alert flags in the public SMS file");
-
-    const cr = c.crashes;
-    const per100 = c.pu ? Math.round(1000 * cr.total / c.pu) / 10 : null, p1 = per100 != null ? f1(per100) : null;
-    const fatal100 = c.pu ? Math.round(10000 * cr.fatal / c.pu) / 100 : null;
-    if (cr.fatal && (fatal100 == null || fatal100 >= 0.5)) add("crashes", "Crashes (24 months)", -20, `${cr.total} reported, ${cr.fatal} fatal` + (fatal100 != null ? ` = ${f2(fatal100)} fatal per 100 power units` : ""));
-    else {
-      const note = `${cr.total} reported` + (cr.fatal ? `, ${cr.fatal} fatal` : "") + (per100 != null && cr.total ? ` = ${p1} per 100 power units` : "");
-      add("crashes", "Crashes (24 months)", per100 != null && per100 > 8 ? -15 : per100 != null && per100 > 4 ? -5 : 0, note);
+    let score = 100;
+    const factors = [], missing = [];
+    const add = (key, label, points, note) => { score += points; factors.push({key, label, points, note}); };
+    for (const [key, label, multiple] of [['driver','Driver',2], ['vehicle','Vehicle',1.5]]) {
+      const r = c[key + '_oos_rate'], n = nat[key + '_oos_rate'], count = c[key + '_insp'];
+      const valid = validRate(r, count) && number(n) && n > 0 && n <= 100;
+      let points = 0, note = 'Unavailable or fewer than 5 category inspections; not a passing result';
+      if (valid) {
+        points = r >= multiple*n ? -25 : r > n ? -10 : 0;
+        note = `${r.toFixed(1)}% vs ${n.toFixed(2)}% benchmark; ${count} inspections`;
+      } else missing.push(key + '_inspections_or_benchmark');
+      add(key + '_oos', label + ' out-of-service rate', points, note);
     }
-
-    if (c.status && c.status !== "A") add("authority", "Registration status", -40, "USDOT number is inactive — the carrier may not operate");
-    else if (c.mc && c.mc_status !== "A") add("authority", "Operating authority", -20, `${c.mc} is not active`);
-    else add("authority", "Operating authority", 0, c.mc ? `${c.mc} active` : "no MC docket on file (private / exempt carrier)");
-
-    // informational only: FMCSA's open-data insurance extract covers a fraction of carriers, so absence is not evidence of a lapse
-    const liab = c.insurance.filter(i => i.type === "Liability (BIPD)");
-    add("insurance", "Liability insurance filing", 0, liab.length ? `${money(liab[0].amount)} with ${liab[0].company}` : "not in the open-data extract — verify on FMCSA L&I");
-
+    add('basics','Public SMS indicators',0,'Informational only; public investigation flags are not complete BASIC alerts');
+    const cr = c.crashes || {}, deaths = Object.hasOwn(cr, 'fatalities') ? cr.fatalities : cr.fatal;
+    const total = cr.total, pu = c.pu;
+    if (!(number(total) && total >= 0 && number(deaths) && deaths >= 0 && number(pu) && pu > 0)) {
+      missing.push('crash_counts_or_fleet');
+      add('crashes','Crash involvement and fatalities',0,'Insufficient crash or fleet data; not a zero-crash result');
+    } else {
+      const per100 = Math.round(1000*total/pu)/10, deaths100 = Math.round(10000*deaths/pu)/100;
+      const points = deaths > 0 && deaths100 >= 0.5 ? -20 : per100 > 8 ? -15 : per100 > 4 ? -5 : 0;
+      add('crashes','Crash involvement and fatalities',points,
+        `${total} crash records; ${deaths} fatalities (people); ${per100.toFixed(1)} records and ${deaths100.toFixed(2)} fatalities per 100 power units; fault not determined`);
+    }
+    const status = c.status;
+    if (!['A','I'].includes(status)) missing.push('registration_status');
+    add('registration','USDOT registration',status === 'I' ? -40 : 0,
+      status === 'I' ? 'Inactive in census extract; verify official record' : status === 'A' ? 'Active in census extract; not proof of for-hire authority' : 'Registration status unconfirmed');
+    add('authority','Operating authority',0,'Not verified; a USDOT status or MC docket is not a current authority check');
+    add('insurance','Liability insurance',0,'Not verified; historical filings or missing extract rows do not establish current coverage');
+    const limited = missing.length > 0;
     score = Math.max(0, Math.min(100, score));
-    const letter = score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F";
-    return { score, letter, limited: c.insp < MIN_INSP, factors };
+    const letter = limited ? 'NR' : score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
+    return {score: limited ? null : score, letter, limited, missing, version:'2.0.0', factors};
   }
   root.dotGrade = grade;
-})(typeof module !== "undefined" ? module.exports : window);
+})(typeof module !== 'undefined' ? module.exports : window);

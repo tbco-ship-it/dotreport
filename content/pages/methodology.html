@@ -1,23 +1,31 @@
 ---
 title: Methodology & data sources
-description: Exactly how the A–F grade is computed from FMCSA's public data, the national averages we compare against, and what the grade is not.
+description: Independent screening index v2.0.0: what is scored, when a grade is withheld, and what public FMCSA records cannot verify.
 ---
-<h2>Data</h2>
-<p>Everything comes from four FMCSA open-data files published on <a href="https://data.transportation.gov/" rel="noopener">data.transportation.gov</a>: the Motor Carrier Census (<code>az4n-8mr2</code>), SMS BASIC measures for property carriers (<code>4y6x-dmck</code>), Licensing &amp; Insurance filings (<code>c5y8-a4uz</code>) and the SMS crash file (<code>4wxs-vbns</code>). Static pages are rebuilt from a fresh download; the search box queries the same files live. No scraped or third-party data.</p>
-<h2>National averages</h2>
-<p>The driver and vehicle out-of-service rates we compare against are computed from the entire SMS file (all inspections ÷ all OOS inspections over the 24-month window), not copied from a blog. Current values: driver <strong>{{ nat.driver_oos_rate }}%</strong>, vehicle <strong>{{ nat.vehicle_oos_rate }}%</strong>, from the {{ nat.sms_updated }} snapshot covering {{ '{:,}'.format(nat.carriers_in_sms) }} carriers.</p>
-<h2>The grade</h2>
-<p>Every carrier starts at 100 points.</p>
+<h2>Independent screening, not dispatch approval</h2>
+<p>DOT Report Card reorganizes public records. It does not certify safety, current operating authority, active insurance coverage, or suitability for a shipment. The index is not an FMCSA safety rating or CSA percentile and has not been validated as a crash-prediction model.</p>
+<h2>Source records and dates</h2>
+<p>We use the FMCSA Motor Carrier Census (<code>az4n-8mr2</code>), public SMS measures (<code>4y6x-dmck</code>), insurance filing history (<code>c5y8-a4uz</code>), and SMS crash file (<code>4wxs-vbns</code>) on <a href="https://data.transportation.gov/">data.transportation.gov</a>. Search requests query these public files through our API; they are not real-time checks of every government system.</p>
+<p>The benchmark file's metadata was updated on <strong>{{ nat.sms_updated }}</strong>. This is not necessarily the SMS observation cutoff. Collection completed: <strong>{{ nat.sources.get('collected_at') or 'not recorded for the saved dataset' }}</strong>. Observation cutoff: <strong>{{ nat.sources.get('snapshot_date') or 'not independently verified' }}</strong>. Rebuilding a page does not refresh its source records.</p>
+<p>A weekly collection workflow and an optional manual refresh download all source stages into a new staging directory, validate them, and preserve the last published site if the refresh fails. Code-only deployments use the saved dataset. Source-file update times and the collection window are published after a successful fresh collection. Live API and saved benchmark dates may differ.</p>
+<h2>Benchmarks are comparisons, not legal limits</h2>
+<p>Each benchmark is <strong>total out-of-service inspections ÷ total inspections × 100</strong> for the corresponding category across the SMS source file. Driver: <strong>{{ nat.driver_oos_rate }}%</strong>; vehicle: <strong>{{ nat.vehicle_oos_rate }}%</strong>; {{ '{:,}'.format(nat.carriers_in_sms) }} source-file carriers. These are weighted aggregate comparisons, not statutory standards or a validated peer-group adjustment.</p>
+<h2>Index v2.0.0</h2>
+<p>A grade requires at least <strong>five driver inspections and five vehicle inspections</strong>, valid OOS rates and benchmarks, available crash/fatality totals, a positive fleet count, and a recognized USDOT registration status. Otherwise we show <strong>NR — Not rated</strong> and withhold the numerical score. Missing data is not a passing result. Five is a product display rule, not a statistical confidence guarantee.</p>
+<p>For eligible records, start at 100 and apply the following independent rules:</p>
 <ul>
-<li><strong>Driver OOS rate</strong> (needs ≥ 5 driver inspections): −10 if above the national average, −25 if at least double it.</li>
-<li><strong>Vehicle OOS rate</strong> (needs ≥ 5 vehicle inspections): −10 if above the national average, −25 if 1.5× or worse.</li>
-<li><strong>BASIC alerts</strong>: −15 per BASIC flagged in the public file (Unsafe Driving, HOS, Driver Fitness, Controlled Substances, Vehicle Maintenance).</li>
-<li><strong>Crashes, 24 months</strong>: −20 if fatal crashes reach 0.5 per 100 power units (roughly double the national large-truck rate); otherwise −15 if more than 8 crashes per 100 power units, −5 if more than 4. Crash records don't assign fault.</li>
-<li><strong>Registration and authority</strong>: −40 if the USDOT number itself is inactive; otherwise −20 if the carrier has an MC docket that isn't active.</li>
-<li><strong>Liability insurance</strong>: shown when a BMC-91/91X filing appears in the open-data extract, but never deducted — that extract covers only a fraction of carriers, so a missing row is not evidence of a lapse. The official record is FMCSA's <a href="https://li-public.fmcsa.dot.gov/" rel="noopener">L&amp;I system</a>.</li>
+<li><strong>Driver OOS:</strong> −10 above the benchmark; −25 at or above twice the benchmark. Equality to the benchmark is not penalized.</li>
+<li><strong>Vehicle OOS:</strong> −10 above the benchmark; −25 at or above 1.5 times the benchmark.</li>
+<li><strong>Crash involvement and fatalities:</strong> −20 when reported fatalities (people) reach 0.5 per 100 power units; otherwise −15 above eight crash records per 100 units, or −5 above four. Compare crash records per 100 units rounded half-up to one decimal and fatalities per 100 units to two decimals. These are product-selected thresholds, not official risk cutoffs. They retain the earlier numerical mortality rule, now correctly labeled as people rather than fatal crashes.</li>
+<li><strong>USDOT registration:</strong> −40 for code I (inactive) in the census extract. Code A means active registration in that extract, not authorization to transport property for hire.</li>
+<li><strong>Operating authority, insurance and public SMS indicators:</strong> informational only; no deductions. A missing MC status is not a verified revocation. Missing insurance rows do not prove a lapse. An insurance-history row does not prove current coverage. Public indicator fields are not a complete BASIC alert assessment.</li>
 </ul>
-<p>A = 90+, B = 75–89, C = 60–74, D = 40–59, F = below 40. Carriers with fewer than 5 inspections in total are marked "limited data".</p>
-<h2>What it is not</h2>
-<p>It is not an FMCSA safety rating, not a CSA percentile, and not a prediction of a crash. FMCSA's own ratings (Satisfactory / Conditional / Unsatisfactory) come from compliance reviews and are shown on <a href="https://safer.fmcsa.dot.gov/" rel="noopener">SAFER</a>. Our grade is a transparent summary of the public record so that a carrier can see what others see, and a shipper can get a first read in five seconds. Use SAFER and SMS for the official record.</p>
-<h2>Corrections</h2>
-<p>If a page shows the wrong company for a USDOT number or a figure that doesn't match FMCSA's file for the same snapshot date, <a href="../contact/">tell us</a> with the USDOT number and we'll check the source row. Data errors in FMCSA's own record go through <a href="../guides/dataqs-challenge/">DataQs</a>.</p>
+<p>Clamp the result to 0–100. A = 90–100, B = 75–89, C = 60–74, D = 40–59, F = 0–39. Every grade still requires separate official checks; A does not mean all indicators are favorable.</p>
+<h2>Counts, coverage and known limitations</h2>
+<p><strong>Fatalities and injuries count people.</strong> Fatal and injury crash counts are separate event counts, computed only when row-level source records are available. Older saved data and older API responses do not contain those event counts; we show “not available” rather than infer them from the number of people. Crash involvement does not establish fault or preventability; our index is not FMCSA's Crash Indicator BASIC.</p>
+<p>Under the FAST Act, complete alerts and relative percentiles for property carriers are not publicly displayed. A source-file indicator, including an investigation-related field, must not be represented as a complete SMS alert check. Official <a href="https://www.fmcsa.dot.gov/fastact/csa">FMCSA explanation</a>.</p>
+<p>USDOT registration and operating authority are distinct. A private carrier may have a USDOT number without needing an MC number. Official <a href="https://www.fmcsa.dot.gov/faq/what-private-motor-carrier">private-carrier explanation</a>. We do not determine whether an exemption applies to a particular shipment.</p>
+<p>Insurance data may include historical filings and incomplete coverage of carriers. Confirm current authority, coverage, limits and cancellation information in <a href="https://li-public.fmcsa.dot.gov/">FMCSA Licensing &amp; Insurance</a> and with the appropriate insurer. Use <a href="https://safer.fmcsa.dot.gov/">SAFER</a> and <a href="https://ai.fmcsa.dot.gov/SMS">SMS</a> for official records. FMCSA itself warns against inferring overall safety solely from SMS data.</p>
+<h2>Corrections and version history</h2>
+<p>Version 2.0.0, September 18, 2026, withholds grades for insufficient data, separates registration from authority, removes deductions based on unverified authority/public alert interpretation, labels casualty counts correctly, and stops claiming insurance or dispatch eligibility from the index. As a result, grades can differ from earlier versions even when source records are unchanged.</p>
+<p>Report mismatched company identifiers or figures through <a href="../contact/">Contact</a>, including the USDOT number, source, date and field. Corrections to government records can be requested through <a href="../guides/dataqs-challenge/">DataQs</a>.</p>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ s.name }} Trucking Companies — Safety Inspection Directory for {{ '{:,}'.format(s.carriers|length) }} Largest Carriers | {{ site }}{% endblock %}
-{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs national averages, BASIC alerts, crashes, authority and insurance, graded A–F.{% endblock %}
+{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs national averages, public SMS indicators, crashes, authority and insurance, graded A–F.{% endblock %}
 
 {% block content %}
 <div class="breadcrumb">
@@ -22,7 +22,7 @@
   </div>
   <div class="snapshot">
     <span class="rec-dot">●</span> <b>FMCSA SMS Census</b>
-    <span>Snapshot · {{ nat.sms_updated }}</span>
+    <span>File metadata updated · {{ nat.sms_updated }}</span>
   </div>
 </section>
 
@@ -52,6 +52,7 @@
     <span>Graded D or F</span>
   </div>
 </div>
+<p class="hint">{{ s.grades.get('NR', 0) }} carriers are not rated because required data is insufficient. These statistics cover this directory's indexed large carriers, not every carrier in the state.</p>
 
 <ul class="list">
   {% for c in s.carriers[:60] %}
@@ -83,5 +84,5 @@
 {% endif %}
 
 <div class="ad-slot"><!-- ad: state --></div>
-<p class="hint">Source: FMCSA Motor Carrier Census and SMS records via data.transportation.gov, snapshot {{ nat.sms_updated }}. State assignment is based on the principal address on the carrier's MCS-150 filing.</p>
+<p class="hint">Source: FMCSA Motor Carrier Census and SMS records via data.transportation.gov, file metadata updated {{ nat.sms_updated }}. State assignment is based on the principal address on the carrier's MCS-150 filing.</p>
 {% endblock %}

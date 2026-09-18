@@ -9,6 +9,7 @@ import shutil
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from grading import grade
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -55,7 +56,13 @@ def main():
     carriers = [c for c in json.loads((ROOT / "data/carriers.json").read_text())
                 if c["state"] in STATES and not (c["pu"] >= 200 and c["drivers"] * 10 < c["pu"])]
     nat = json.loads((ROOT / "data/national.json").read_text())
+    source_file = ROOT / "data/source_metadata.json"
+    nat["sources"] = json.loads(source_file.read_text()) if source_file.exists() else {}
+    for c in carriers:
+        c["grade"] = grade(c, nat)
     partners = json.loads((ROOT / "data/partners.json").read_text())
+    by_dot = {c["dot"]: c for c in carriers}
+    examples = [by_dot[d] for d in (54283, 53467) if d in by_dot]
     by_state = defaultdict(list)
     for c in carriers:
         by_state[c["state"]].append(c)
@@ -83,7 +90,7 @@ def main():
     env = Environment(loader=FileSystemLoader(ROOT / "templates"), autoescape=select_autoescape(["html"]))
     env.filters["cname"] = cname
     env.globals.update(site=SITE, base=base, origin=origin, today=today, v=v, adsense_pub=args.adsense_pub, api=args.api,
-                       nat=nat, partners=partners, states=states, guides=guides, n_carriers=len(carriers))
+                       nat=nat, partners=partners, states=states, guides=guides, n_carriers=len(carriers), examples=examples)
 
     if DIST.exists():
         shutil.rmtree(DIST)
@@ -128,6 +135,12 @@ def main():
         (DIST / "ads.txt").write_text(f"google.com, {args.adsense_pub}, DIRECT, f08c47fec0942fa0\n")
     if args.cname:
         (DIST / "CNAME").write_text(args.cname + "\n")
+    (DIST / "build-info.json").write_text(json.dumps({
+        "built_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "index_version": "2.0.0", "carriers": len(carriers),
+        "source_metadata": nat["sources"],
+        "sms_file_metadata_updated": nat.get("sms_updated"),
+        "build_date_is_not_data_date": True}, indent=2))
     print(f"built {len(urls)} pages ({len(carriers)} carriers, {len(states)} states, {len(guides)} guides) -> {DIST}")
 
 

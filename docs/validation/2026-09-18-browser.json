@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "checks": [
+    "static report claims",
+    "static copy link",
+    "print handler (mock; PDF output not assessed)",
+    "live-render fixture / static verification text parity",
+    "zero-inspection live fixture has NR and unknown OOS",
+    "404 carrier feedback",
+    "upstream search error not misrepresented as no carrier",
+    "keyboard suggestions select matching fixture",
+    "390px mobile no horizontal overflow",
+    "mobile verification before detail cards",
+    "360px home no horizontal overflow",
+    "example IDs from source records"
+  ],
+  "count": 12,
+  "runtime_errors": [],
+  "browser": "Chromium via Playwright (Browser plugin not available)",
+  "environment": "offline built HTML with mocked fetch/history/clipboard; external fonts and ads blocked",
+  "not_verified": [
+    "production browser",
+    "real-time API response/availability",
+    "PDF pagination",
+    "clipboard permission",
+    "full accessibility compliance"
+  ]
+}

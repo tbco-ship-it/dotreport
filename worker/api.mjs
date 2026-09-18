@@ -31,6 +31,7 @@ async function soda(ds, params) {
 function normalize(c, s, ins, cr) {
   const cargo = CARGO();
   const rec = {
+    schema_version: 2, retrieved_at: new Date().toISOString(), snapshot_date: null,
     dot: Number(c.dot_number), name: c.legal_name.trim(), dba: (c.dba_name || "").trim() || null, slug: slug(c.legal_name),
     street: c.phy_street, city: title(c.phy_city), state: c.phy_state, zip: (c.phy_zip || "").slice(0, 5),
     pu: num(c.power_units), drivers: num(c.total_drivers), hm: c.hm_ind === "Y", classdef: c.classdef,
@@ -40,7 +41,7 @@ function normalize(c, s, ins, cr) {
     cargo: Object.keys(cargo).filter(k => c[k] === "X").map(k => cargo[k]),
     insp: num(s.insp_total), driver_insp: num(s.driver_insp_total), driver_oos: num(s.driver_oos_insp_total),
     vehicle_insp: num(s.vehicle_insp_total), vehicle_oos: num(s.vehicle_oos_insp_total),
-    basics: BASICS.map(([k, label]) => ({ key: k, label, viol: num(s[`${k}_insp_w_viol`]), measure: num(s[`${k}_measure`]), alert: s[`${k}_ac`] === "Y" })),
+    basics: BASICS.map(([k, label]) => ({ key: k, label, viol: s[`${k}_insp_w_viol`] == null ? null : num(s[`${k}_insp_w_viol`]), measure: num(s[`${k}_measure`]), public_ac: ["Y", "N"].includes(s[`${k}_ac`]) ? s[`${k}_ac`] : null, alert: null })),
   };
   rec.driver_oos_rate = rec.driver_insp ? Math.round(1000 * rec.driver_oos / rec.driver_insp) / 10 : null;
   rec.vehicle_oos_rate = rec.vehicle_insp ? Math.round(1000 * rec.vehicle_oos / rec.vehicle_insp) / 10 : null;
@@ -50,6 +51,10 @@ function normalize(c, s, ins, cr) {
   rec.insurance = Object.keys(latest).sort().map(t => ({ type: TYPE[t] || t, form: latest[t].ins_form_code, amount: num(latest[t].max_cov_amount), company: title(latest[t].insurance_company_name), effective: ymd(latest[t].effective_date) }));
   const dates = cr.map(r => crashDate(r.report_date)).filter(Boolean).sort();
   rec.crashes = { total: cr.length, fatal: cr.reduce((a, r) => a + num(r.fatalities), 0), injury: cr.reduce((a, r) => a + num(r.injuries), 0), tow: cr.filter(r => r.tow_away === "Y" || r.tow_away === "true").length, first: dates[0] || null, last: dates[dates.length - 1] || null };
+  Object.assign(rec.crashes, { fatalities: rec.crashes.fatal, injuries: rec.crashes.injury,
+    fatal_crashes: cr.filter(r => num(r.fatalities) > 0).length,
+    injury_crashes: cr.filter(r => num(r.injuries) > 0).length });
+  rec.sms_present = Object.keys(s).length > 0;
   return rec;
 }
 
@@ -74,11 +79,11 @@ export default {
       if (url.pathname === "/search") {
         const q = (url.searchParams.get("q") || "").trim().slice(0, 80);
         if (q.length < 2) return json([], h);
-        const m = /^(?:MC[-\s]?)?(\d{2,8})$/i.exec(q);
+        const m = /^(?:(MC|FF|MX)[-\s]?)?(\d{2,8})$/i.exec(q);
         const sel = "dot_number,legal_name,dba_name,phy_city,phy_state,power_units,status_code";
         let rows;
-        if (m && /^mc/i.test(q)) rows = await soda("az4n-8mr2", { "$where": `docket1='${m[1]}'`, "$select": sel, "$limit": 8 });
-        else if (m) rows = await soda("az4n-8mr2", { "$where": `dot_number='${m[1]}' OR docket1='${m[1]}'`, "$select": sel, "$order": "dot_number", "$limit": 8 });
+        if (m && m[1]) rows = await soda("az4n-8mr2", { "$where": `docket1='${m[2]}' AND docket1prefix='${m[1].toUpperCase()}'`, "$select": sel, "$limit": 8 });
+        else if (m) rows = await soda("az4n-8mr2", { "$where": `dot_number='${m[2]}' OR docket1='${m[2]}'`, "$select": sel, "$order": "dot_number", "$limit": 8 });
         else {
           const up = q.toUpperCase().replace(/'/g, "''");
           rows = await soda("az4n-8mr2", { "$where": `starts_with(upper(legal_name),'${up}') OR starts_with(upper(dba_name),'${up}')`, "$select": sel, "$order": "status_code,power_units::number DESC", "$limit": 8 });

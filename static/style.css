@@ -1119,3 +1119,12 @@ footer p { margin: 6px 0; }
   .layout { display: block; }
   .sticky { position: static; }
 }
+
+/* Integrity release: NR is neither a pass nor a failure. */
+.grade--NR{background:var(--surface,#f3f4f6);color:var(--muted,#475569);font-size:42px;letter-spacing:-2px}
+.g-NR{background:#e5e7eb;color:#374151;font-size:11px}
+.grade{flex-shrink:0}
+.verifyrow{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}
+.verifyvalue{max-width:none;overflow-wrap:anywhere}
+@media(min-width:961px){.overview{grid-template-columns:220px minmax(0,1fr) 300px}}
+@media(max-width:960px){.layout>.sticky{grid-row:1;position:static}.grade--NR{font-size:36px}.verifyrow{gap:12px}}

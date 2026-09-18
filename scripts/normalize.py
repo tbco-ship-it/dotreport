@@ -6,6 +6,7 @@ in-browser report use identical fields. Grading rules live in grading.py (Python
 scripts/test_grade.mjs checks the two agree on every carrier in this file.
 """
 import json
+import os
 import re
 from collections import defaultdict
 from datetime import datetime
@@ -14,7 +15,8 @@ from pathlib import Path
 from grading import grade, rnd
 
 ROOT = Path(__file__).resolve().parent.parent
-RAW = ROOT / "data/raw"
+RAW = Path(os.environ.get("DOT_RAW_DIR", ROOT / "data/raw"))
+DATA = Path(os.environ.get("DOT_DATA_DIR", ROOT / "data"))
 CARGO = {"crgo_genfreight": "General freight", "crgo_household": "Household goods", "crgo_metalsheet": "Metal: sheets, coils, rolls", "crgo_motoveh": "Motor vehicles",
          "crgo_drivetow": "Drive away / tow away", "crgo_logpole": "Logs, poles, beams, lumber", "crgo_bldgmat": "Building materials", "crgo_mobilehome": "Mobile homes",
          "crgo_machlrg": "Machinery, large objects", "crgo_produce": "Fresh produce", "crgo_liqgas": "Liquids / gases", "crgo_intermodal": "Intermodal containers",
@@ -63,7 +65,7 @@ def main():
         d = c["dot_number"]
         s = sms.get(d, {})
         rec = {
-            "dot": int(d), "name": c["legal_name"].strip(), "dba": (c.get("dba_name") or "").strip() or None,
+            "schema_version": 2, "dot": int(d), "name": c["legal_name"].strip(), "dba": (c.get("dba_name") or "").strip() or None,
             "slug": slugify(c["legal_name"]), "street": c.get("phy_street"), "city": (c.get("phy_city") or "").title(), "state": c.get("phy_state"), "zip": (c.get("phy_zip") or "")[:5],
             "pu": num(c.get("power_units")), "drivers": num(c.get("total_drivers")), "hm": c.get("hm_ind") == "Y", "status": c.get("status_code"), "operation": c.get("carrier_operation"),
             "classdef": c.get("classdef"), "mc": f"{c['docket1prefix']}-{c['docket1']}" if c.get("docket1prefix") and c.get("docket1") else None,
@@ -72,7 +74,7 @@ def main():
             "cargo": [CARGO[k] for k in CARGO if c.get(k) == "X"],
             "insp": num(s.get("insp_total")), "driver_insp": num(s.get("driver_insp_total")), "driver_oos": num(s.get("driver_oos_insp_total")),
             "vehicle_insp": num(s.get("vehicle_insp_total")), "vehicle_oos": num(s.get("vehicle_oos_insp_total")),
-            "basics": [{"key": k, "label": lbl, "viol": num(s.get(f"{k}_insp_w_viol")), "measure": num(s.get(f"{k}_measure"), float), "alert": s.get(f"{k}_ac") == "Y"} for k, lbl in BASICS],
+            "basics": [{"key": k, "label": lbl, "viol": num(s.get(f"{k}_insp_w_viol")) if s.get(f"{k}_insp_w_viol") is not None else None, "measure": num(s.get(f"{k}_measure"), float), "public_ac": s.get(f"{k}_ac") if s.get(f"{k}_ac") in ("Y", "N") else None, "alert": None} for k, lbl in BASICS],
         }
         rec["driver_oos_rate"] = rnd(100 * rec["driver_oos"] / rec["driver_insp"], 1) if rec["driver_insp"] else None
         rec["vehicle_oos_rate"] = rnd(100 * rec["vehicle_oos"] / rec["vehicle_insp"], 1) if rec["vehicle_insp"] else None
@@ -87,11 +89,17 @@ def main():
         dates = sorted(x for x in (crash_date(r.get("report_date")) for r in cr) if x)
         rec["crashes"] = {"total": len(cr), "fatal": sum(num(r.get("fatalities")) for r in cr), "injury": sum(num(r.get("injuries")) for r in cr),
                           "tow": sum(1 for r in cr if r.get("tow_away") in ("Y", "true")), "first": dates[0] if dates else None, "last": dates[-1] if dates else None}
+        rec["crashes"].update({
+            "fatalities": rec["crashes"]["fatal"], "injuries": rec["crashes"]["injury"],
+            "fatal_crashes": sum(1 for r in cr if num(r.get("fatalities")) > 0),
+            "injury_crashes": sum(1 for r in cr if num(r.get("injuries")) > 0),
+        })
+        rec["sms_present"] = bool(s)
         rec["grade"] = grade(rec, national)
         out.append(rec)
     out.sort(key=lambda r: (-r["pu"], r["name"]))
-    (ROOT / "data/carriers.json").write_text(json.dumps(out, separators=(",", ":")))
-    (ROOT / "data/national.json").write_text(json.dumps({"driver_oos_rate": national["driver_oos_rate"], "vehicle_oos_rate": national["vehicle_oos_rate"],
+    (DATA / "carriers.json").write_text(json.dumps(out, separators=(",", ":")))
+    (DATA / "national.json").write_text(json.dumps({"driver_oos_rate": national["driver_oos_rate"], "vehicle_oos_rate": national["vehicle_oos_rate"],
                                                          "sms_updated": national["sms_updated"], "carriers_in_sms": int(national["n"])}, indent=1))
     from collections import Counter
     print(len(out), "carriers", Counter(r["grade"]["letter"] for r in out), "national", national["driver_oos_rate"], national["vehicle_oos_rate"])

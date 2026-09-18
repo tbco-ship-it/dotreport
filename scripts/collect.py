@@ -6,6 +6,7 @@ SMS BASICs (4y6x-dmck), insurance (c5y8-a4uz), crashes (4wxs-vbns) for those DOT
 National OOS averages computed from the whole SMS file -> data/raw/national.json
 """
 import json
+import os
 import sys
 import time
 import urllib.parse
@@ -13,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-RAW = ROOT / "data/raw"
+RAW = Path(os.environ.get("DOT_RAW_DIR", ROOT / "data/raw"))
 S = "https://data.transportation.gov/resource"
 MIN_PU = int(sys.argv[1]) if len(sys.argv) > 1 else 50
 CENSUS_COLS = ("dot_number,legal_name,dba_name,phy_street,phy_city,phy_state,phy_zip,phone,power_units,total_drivers,status_code,"
