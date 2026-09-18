@@ -11,11 +11,10 @@ concurrency:
   group: pages
   cancel-in-progress: true
 env:
-  # Until the custom domain is bound: project-pages base. Switch to "/" + origin https://dotreportcard.com + cname when DNS is live.
-  BASE: /dotreport/
-  ORIGIN: https://tbco-ship-it.github.io
-  CNAME: ""
-  API: https://dotreport-api.tbfcompany1.workers.dev
+  BASE: /
+  ORIGIN: https://dotreportcard.com
+  CNAME: dotreportcard.com
+  API: https://api.dotreportcard.com
 jobs:
   build:
     runs-on: ubuntu-latest

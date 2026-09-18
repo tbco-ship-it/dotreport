@@ -27,7 +27,7 @@
 
   const NAT = window.NAT || { driver_oos_rate: 5.42, vehicle_oos_rate: 21.47, sms_updated: '2026-09-13' };
   const P = window.PARTNERS || {};
-  const API = window.API || 'https://dotreport-api.tbfcompany1.workers.dev';
+  const API = window.API || 'https://api.dotreportcard.com';
   const BASE = window.BASE || '/';
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
