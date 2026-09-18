@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify immutable reviewed patch and baseline
+      - name: Verify reviewed patch and apply non-workflow source only
         run: |
           git merge-base --is-ancestor ee2878ba6166ab30cf33d96b85442c18a75d28d9 HEAD
           python - <<'PY'
@@ -34,8 +34,8 @@ jobs:
           assert hashlib.sha256(patch).hexdigest() == 'c3da244b2618bca43b3e6c052ab923c80fd30ebeff6c291fd937765d414b2e9f', 'Patch checksum mismatch'
           Path('/tmp/reviewed-remediation.patch').write_bytes(patch)
           PY
-          git apply --index --check --unidiff-zero /tmp/reviewed-remediation.patch
-          git apply --index --unidiff-zero /tmp/reviewed-remediation.patch
+          git apply --index --check --unidiff-zero --exclude='.github/workflows/*' /tmp/reviewed-remediation.patch
+          git apply --index --unidiff-zero --exclude='.github/workflows/*' /tmp/reviewed-remediation.patch
       - run: pip install jinja2
       - name: Regression and data validation
         run: |
@@ -46,12 +46,13 @@ jobs:
           python scripts/build.py --base / --origin https://dotreportcard.com --cname dotreportcard.com --api https://api.dotreportcard.com
           python scripts/validate_site.py
           git diff --check
-      - name: Commit only validated readable source and evidence
+      - name: Commit validated source without changing any workflow file
         run: |
-          rm .delivery/patch-{1,2,3,4}.b64 .github/workflows/apply-remediation.yml
+          rm .delivery/patch-{1,2,3,4}.b64
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
+          test -z "$(git diff --cached --name-only -- .github/workflows)"
           git commit -m 'fix: make safety screening evidence-based; add provenance, regression gates and rationale'
           git push origin HEAD:fix/data-integrity-2026-09-18
           git rev-parse HEAD | tee remediation-commit.txt
