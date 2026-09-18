@@ -72,6 +72,8 @@ jobs:
           fi
       - name: Build using canonical current policy
         run: python scripts/build.py --base "$BASE" --origin "$ORIGIN" --cname "$CNAME" --api "$API"
+      - name: Validate every generated report before publication
+        run: python scripts/validate_site.py
       - name: Record deployment provenance
         run: |
           python -c 'import json,os,pathlib,subprocess; pathlib.Path("dist/build-info.json").write_text(json.dumps({"source_commit":os.environ["GITHUB_SHA"],"data_commit":subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),"policy":"2.0.0","run_id":os.environ["GITHUB_RUN_ID"],"refresh_outcome":"${{ steps.refresh.outcome }}"}))'
