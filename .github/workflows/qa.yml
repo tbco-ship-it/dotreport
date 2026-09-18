@@ -27,7 +27,8 @@ jobs:
           retention-days: 7
       - name: Regression tests
         run: |
-          if [ -d tests ]; then python -m unittest discover -s tests -v; fi
+          python -m unittest discover -s tests -v
+          node tests/test_worker.mjs
           node scripts/test_grade.mjs
       - name: Build all carrier reports
         run: python scripts/build.py --base / --origin https://dotreportcard.com --cname dotreportcard.com --api https://api.dotreportcard.com
