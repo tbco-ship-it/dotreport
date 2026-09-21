@@ -2,5 +2,31 @@
  "driver_oos_rate": 5.42,
  "vehicle_oos_rate": 21.47,
  "sms_updated": "2026-09-13",
- "carriers_in_sms": 716962
+ "carriers_in_sms": 716962,
+ "sources": {
+  "census": {
+   "dataset": "az4n-8mr2",
+   "retrieved_at": "2026-09-21T10:00:33Z",
+   "dataset_updated_at": "2026-09-20T13:17:43Z",
+   "reporting_period_end": null
+  },
+  "sms": {
+   "dataset": "4y6x-dmck",
+   "retrieved_at": "2026-09-21T10:00:50Z",
+   "dataset_updated_at": "2026-09-13T07:02:59Z",
+   "reporting_period_end": null
+  },
+  "insurance": {
+   "dataset": "c5y8-a4uz",
+   "retrieved_at": "2026-09-21T10:01:01Z",
+   "dataset_updated_at": "2026-09-20T10:50:09Z",
+   "reporting_period_end": null
+  },
+  "crashes": {
+   "dataset": "4wxs-vbns",
+   "retrieved_at": "2026-09-21T10:01:28Z",
+   "dataset_updated_at": "2026-09-13T07:02:30Z",
+   "reporting_period_end": null
+  }
+ }
 }
