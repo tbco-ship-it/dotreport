@@ -149,7 +149,9 @@ def main():
     # index of static pages so the live lookup can link to the permanent page when one exists
     (DIST / "static/index.json").write_text(json.dumps({c["dot"]: c["slug"] for c in carriers}, separators=(",", ":")))
 
-    write_sitemaps(urls, origin, base, today)
+    # No lastmod: a rebuild is not a content change. Google uses lastmod only when it is
+    # "consistently and verifiably accurate"; stamping today's date on every URL fails that.
+    write_sitemaps(urls, origin, base)
     (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {origin}{base}sitemap.xml\n")
     (DIST / "404.html").write_text(env.get_template("404.html").render(path="404"))
     (DIST / ".nojekyll").write_text("")
