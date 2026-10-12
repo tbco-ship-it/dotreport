@@ -6,25 +6,25 @@
  "sources": {
   "census": {
    "dataset": "az4n-8mr2",
-   "retrieved_at": "2026-10-05T11:35:41Z",
-   "dataset_updated_at": "2026-10-04T12:23:00Z",
+   "retrieved_at": "2026-10-12T12:07:31Z",
+   "dataset_updated_at": "2026-10-11T10:50:11Z",
    "reporting_period_end": null
   },
   "sms": {
    "dataset": "4y6x-dmck",
-   "retrieved_at": "2026-10-05T11:36:04Z",
+   "retrieved_at": "2026-10-12T12:08:18Z",
    "dataset_updated_at": "2026-09-13T07:02:59Z",
    "reporting_period_end": null
   },
   "insurance": {
    "dataset": "c5y8-a4uz",
-   "retrieved_at": "2026-10-05T11:36:23Z",
-   "dataset_updated_at": "2026-10-05T10:55:42Z",
+   "retrieved_at": "2026-10-12T12:08:50Z",
+   "dataset_updated_at": "2026-10-12T11:00:40Z",
    "reporting_period_end": null
   },
   "crashes": {
    "dataset": "4wxs-vbns",
-   "retrieved_at": "2026-10-05T11:36:55Z",
+   "retrieved_at": "2026-10-12T12:09:26Z",
    "dataset_updated_at": "2026-09-13T07:02:30Z",
    "reporting_period_end": null
   }
