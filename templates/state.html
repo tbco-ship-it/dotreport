@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ s.name }} Trucking Companies — Safety Inspection Directory for {{ '{:,}'.format(s.carriers|length) }} Largest Carriers | {{ site }}{% endblock %}
-{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs national averages, public acute/critical indicators, crashes, authority and insurance, graded A–F.{% endblock %}
+{% block title %}{{ s.name }} Interstate Motor Carriers (50+ Power Units) | {{ site }}{% endblock %}
+{% block description %}Browse FMCSA safety summaries for {{ s.name }} interstate motor carriers with 50 or more power units. Sections use carrier-reported operation and cargo fields; this is not a complete trucking-company directory, quote board, or job listing.{% endblock %}
 
 {% block content %}
 <div class="breadcrumb">
@@ -15,15 +15,27 @@
   <div>
     <h1 class="carrier-title">{{ s.name }} Motor Carriers (50+ Power Units)</h1>
     <div class="meta">
-      <span><b>{{ '{:,}'.format(s.carriers|length) }}</b> active interstate carriers</span>
+      <span><b>{{ '{:,}'.format(s.carriers|length) }}</b> indexed active interstate carriers</span>
       <span><b>{{ '{:,}'.format(s.pu) }}</b> power units combined</span>
-      <span>Ranked by fleet size</span>
+      <span>Each section is ordered by fleet size</span>
     </div>
   </div>
   <div class="snapshot">
     <span class="rec-dot">●</span> <b>FMCSA SMS Census</b>
     <span>Dataset updated · {{ nat.sms_updated }}</span>
   </div>
+</section>
+
+<section class="list-intro" aria-labelledby="list-intro-title">
+  <h2 id="list-intro-title">About this list</h2>
+  <p>This is an index of large {{ s.name }} interstate motor carriers and summaries of public FMCSA safety records. Use it to review a carrier you already know, then verify its current authority directly with FMCSA. The counts below cover all {{ '{:,}'.format(s.carriers|length) }} carriers in this indexed fleet-size subset.</p>
+  <ul class="list-intro__counts" aria-label="Section counts across the full indexed list">
+    {% for section in s.sections %}
+    <li><strong>{{ '{:,}'.format(section.count) }}</strong> {{ section.summary }}</li>
+    {% endfor %}
+  </ul>
+  <p><strong>What this is not:</strong> This is not a complete list of {{ s.name }} trucking companies, a quote or load board, proof that a carrier is available for hire, or a driver job listing. Fleet size and cargo types are carrier-reported; this page does not show current capacity, lanes, rates, or hiring status.</p>
+  <a class="authority-link" href="https://li-public.fmcsa.dot.gov/" target="_blank" rel="noopener">View current FMCSA authority ↗</a>
 </section>
 
 <div class="crashgrid card" style="margin-bottom:20px">
@@ -54,34 +66,54 @@
 </div>
 
 <p class="hint">{{ s.grades.get('NR', 0) }} carriers are not rated (NR). Figures cover this indexed fleet-size subset, not all carriers in the state.</p>
-<ul class="list">
-  {% for c in s.carriers[:60] %}
-  <li>
-    <a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/">
-      <span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>
-      {{ c.name|cname }}
-      <span class="meta">{{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span>
-    </a>
-  </li>
-  {% endfor %}
-</ul>
 
-{% if s.carriers|length > 60 %}
-<details class="fold">
-  <summary>Show all {{ '{:,}'.format(s.carriers|length) }} carriers in {{ s.name }}</summary>
-  <ul class="list">
-    {% for c in s.carriers[60:] %}
-    <li>
-      <a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/">
-        <span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>
-        {{ c.name|cname }}
-        <span class="meta">{{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-</details>
-{% endif %}
+<div class="classification-groups">
+  {% for section in s.sections %}
+  <section class="classification-group" aria-labelledby="section-{{ section.key }}">
+    <div class="classification-group__heading">
+      <h2 id="section-{{ section.key }}">{{ section.title }} <span class="classification-group__count">{{ '{:,}'.format(section.count) }}</span></h2>
+      <p>{{ section.description }}</p>
+    </div>
+
+    {% if section.key == 'private' and section.count > 0 %}
+    <details class="fold classification-group__fold">
+      <summary>Show {{ '{:,}'.format(section.count) }} private-property carriers</summary>
+      <ul class="list carrier-list">
+        {% for c in section.carriers %}
+        <li>
+          <a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/">
+            <span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>
+            <span class="carrier-list__body">
+              <span class="carrier-list__name">{{ c.name|cname }}</span>
+              <span class="carrier-list__meta">USDOT {{ c.dot }} · {{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span>
+              <span class="carrier-list__evidence">{% if c.classdef %}FMCSA class: {{ c.classdef }}{% else %}No class definition in this extract{% endif %}{% if c.cargo %} · Reported cargo: {{ c.cargo|join(', ') }}{% else %} · No cargo category recorded in this extract{% endif %}</span>
+            </span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% elif section.count > 0 %}
+    <ul class="list carrier-list">
+      {% for c in section.carriers %}
+      <li>
+        <a href="{{ base }}carrier/{{ c.dot }}-{{ c.slug }}/">
+          <span class="g g-{{ c.grade.letter }}">{{ c.grade.letter }}</span>
+          <span class="carrier-list__body">
+            <span class="carrier-list__name">{{ c.name|cname }}</span>
+            <span class="carrier-list__meta">USDOT {{ c.dot }} · {{ c.city }} · {{ '{:,}'.format(c.pu) }} units</span>
+            <span class="carrier-list__evidence">{% if c.classdef %}FMCSA class: {{ c.classdef }}{% else %}No class definition in this extract{% endif %}{% if c.cargo %} · Reported cargo: {{ c.cargo|join(', ') }}{% else %} · No cargo category recorded in this extract{% endif %}</span>
+          </span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="classification-group__empty">No carriers in this section for the current indexed subset.</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
 
 <div class="ad-slot"><!-- ad: state --></div>
 <p class="hint">Source: FMCSA Motor Carrier Census and SMS records via data.transportation.gov, dataset last updated {{ nat.sms_updated }}. State assignment is based on the principal address on the carrier's MCS-150 filing.</p>

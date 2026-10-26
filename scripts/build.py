@@ -23,6 +23,54 @@ STATES = {"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "C
           "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas",
           "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming", "PR": "Puerto Rico"}
 
+LIST_SECTIONS = (
+    {"key": "general", "title": "For-hire + general-freight signal", "summary": "for-hire / general freight",
+     "description": "FMCSA Census reports for-hire operation and general freight. This does not confirm current authority or availability."},
+    {"key": "specialty", "title": "For-hire + specialty cargo", "summary": "for-hire / specialty cargo",
+     "description": "FMCSA Census reports for-hire operation and cargo types other than general freight."},
+    {"key": "mixed", "title": "Mixed class / verify service", "summary": "mixed class",
+     "description": "FMCSA Census reports both private-property and for-hire classifications. Verify the carrier’s service and current authority."},
+    {"key": "passenger", "title": "Passenger or passenger / mixed", "summary": "passenger class",
+     "description": "FMCSA Census reports a passenger operation. These records remain visible in a separate section."},
+    {"key": "private", "title": "Private-property fleet", "summary": "private-property only",
+     "description": "FMCSA Census classifies this operation as private property; third-party freight service is not established here."},
+    {"key": "unclassified", "title": "Unclassified / missing fields", "summary": "unclassified / missing",
+     "description": "The collected operation or cargo fields are missing or do not fit the rules above. No company-name guesses are used."},
+)
+
+
+def list_section(carrier):
+    """Classify from normalized FMCSA Census fields collected by collect.py only."""
+    if "classdef" not in carrier or "cargo" not in carrier:
+        return "unclassified"
+    raw_classdef = carrier.get("classdef")
+    if not isinstance(raw_classdef, str) or not raw_classdef.strip():
+        return "unclassified"
+
+    # FMCSA classdef categories are separated by semicolons. Passenger labels
+    # contain commas (for example, "PRIVATE PASSENGER, BUSINESS").
+    classes = {value.strip().upper() for value in raw_classdef.split(";") if value.strip()}
+    for_hire = bool(classes & {"AUTHORIZED FOR HIRE", "EXEMPT FOR HIRE"})
+    private_property = "PRIVATE PROPERTY" in classes
+    passenger = any(value == "PRIVATE PASSENGER" or value.startswith("PRIVATE PASSENGER,")
+                    for value in classes)
+    cargo = carrier.get("cargo")
+    if not isinstance(cargo, list):
+        return "unclassified"
+    cargo = set(cargo)
+
+    if passenger:
+        return "passenger"
+    if for_hire and private_property:
+        return "mixed"
+    if for_hire and "General freight" in cargo:
+        return "general"
+    if for_hire and cargo:
+        return "specialty"
+    if private_property and not for_hire:
+        return "private"
+    return "unclassified"
+
 
 UPPER = {"LLC", "LP", "LLP", "USA", "DBA", "II", "III", "IV"}
 
@@ -101,7 +149,18 @@ def main():
         di, do = sum(c.get("driver_insp") or 0 for c in cs), sum(c.get("driver_oos") or 0 for c in cs)
         vi, vo = sum(c.get("vehicle_insp") or 0 for c in cs), sum(c.get("vehicle_oos") or 0 for c in cs)
         grades = Counter(c["grade"]["letter"] for c in cs)
-        states.append({"code": code, "name": STATES[code], "carriers": cs, "n": len(cs), "pu": sum(c["pu"] for c in cs), "grades": grades,
+        grouped = {section["key"]: [] for section in LIST_SECTIONS}
+        for c in cs:
+            grouped[list_section(c)].append(c)
+        sections = []
+        for section in LIST_SECTIONS:
+            section_carriers = grouped[section["key"]]
+            section_carriers.sort(key=lambda c: (-c["pu"], c["name"]))
+            sections.append({**section, "carriers": section_carriers, "count": len(section_carriers)})
+        if sum(section["count"] for section in sections) != len(cs):
+            raise ValueError(f"List section counts do not match {code} carrier count")
+        states.append({"code": code, "name": STATES[code], "carriers": cs, "sections": sections,
+                       "n": len(cs), "pu": sum(c["pu"] for c in cs), "grades": grades,
                        "driver_oos_rate": round(100 * do / di, 1) if di else 0, "vehicle_oos_rate": round(100 * vo / vi, 1) if vi else 0,
                        "dist": f"{grades.get('A', 0) + grades.get('B', 0)} are graded A or B, {grades.get('D', 0) + grades.get('F', 0)} D or F; {grades.get('NR', 0)} not rated."})
     states.sort(key=lambda s: -s["n"])
