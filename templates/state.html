@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ s.name }} Interstate Motor Carriers (50+ Power Units) | {{ site }}{% endblock %}
-{% block description %}Browse FMCSA safety summaries for {{ s.name }} interstate motor carriers with 50 or more power units. Sections use carrier-reported operation and cargo fields; this is not a complete trucking-company directory, quote board, or job listing.{% endblock %}
+{% block title %}{{ s.name }} Trucking Companies — Safety Inspection Directory for {{ '{:,}'.format(s.carriers|length) }} Largest Carriers | {{ site }}{% endblock %}
+{% block description %}FMCSA safety report cards for {{ s.name }}'s largest interstate motor carriers (50+ power units): out-of-service rates vs national averages, public acute/critical indicators, crashes, authority and insurance, graded A–F.{% endblock %}
 
 {% block content %}
 <div class="breadcrumb">
