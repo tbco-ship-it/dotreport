@@ -1,31 +1,31 @@
 {
- "driver_oos_rate": 5.47,
- "vehicle_oos_rate": 21.55,
- "sms_updated": "2026-10-13",
- "carriers_in_sms": 676951,
+ "driver_oos_rate": 5.44,
+ "vehicle_oos_rate": 21.57,
+ "sms_updated": "2026-11-13",
+ "carriers_in_sms": 673595,
  "sources": {
   "census": {
    "dataset": "az4n-8mr2",
-   "retrieved_at": "2026-11-09T12:58:41Z",
-   "dataset_updated_at": "2026-11-08T19:29:29Z",
+   "retrieved_at": "2026-11-16T12:52:13Z",
+   "dataset_updated_at": "2026-11-16T12:09:57Z",
    "reporting_period_end": null
   },
   "sms": {
    "dataset": "4y6x-dmck",
-   "retrieved_at": "2026-11-09T12:58:58Z",
-   "dataset_updated_at": "2026-10-13T07:05:22Z",
+   "retrieved_at": "2026-11-16T12:53:31Z",
+   "dataset_updated_at": "2026-11-13T07:05:17Z",
    "reporting_period_end": null
   },
   "insurance": {
    "dataset": "c5y8-a4uz",
-   "retrieved_at": "2026-11-09T12:59:14Z",
-   "dataset_updated_at": "2026-11-09T10:09:23Z",
+   "retrieved_at": "2026-11-16T12:54:44Z",
+   "dataset_updated_at": "2026-11-16T10:12:41Z",
    "reporting_period_end": null
   },
   "crashes": {
    "dataset": "4wxs-vbns",
-   "retrieved_at": "2026-11-09T12:59:34Z",
-   "dataset_updated_at": "2026-10-13T07:04:37Z",
+   "retrieved_at": "2026-11-16T12:55:57Z",
+   "dataset_updated_at": "2026-11-13T07:03:59Z",
    "reporting_period_end": null
   }
  }
